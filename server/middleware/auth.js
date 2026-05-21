@@ -1,7 +1,9 @@
-const supabase = require('../config/supabase');
+const jwt = require('jsonwebtoken');
 
-const protect = async (req, res, next) => {
+exports.protect = async (req, res, next) => {
   let token;
+
+  console.log('---------------- PROTECT MIDDLEWARE HIT ----------------');
 
   if (
     req.headers.authorization &&
@@ -11,22 +13,29 @@ const protect = async (req, res, next) => {
   }
 
   if (!token) {
-    return res.status(401).json({ message: 'Not authorized, no token' });
+    console.log('TOKEN MISSING: Unauthorized');
+    return res.status(401).json({
+      success: false,
+      message: 'Not authorized to access this route',
+    });
   }
 
   try {
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    // 1. Verify our custom JWT
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    console.log('JWT VERIFICATION SUCCESS: User ID', decoded.id);
 
-    if (error || !user) {
-      return res.status(401).json({ message: 'Not authorized, token failed' });
-    }
-
-    req.user = user;
+    // 2. Attach decoded user info to request
+    req.user = decoded;
+    
+    console.log('---------------- PROTECT MIDDLEWARE DONE ----------------');
     next();
   } catch (error) {
-    console.error('Auth Middleware Error:', error);
-    res.status(401).json({ message: 'Not authorized' });
+    console.log('JWT VERIFICATION FAILED:', error.message);
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid or expired token',
+    });
   }
 };
-
-module.exports = { protect };

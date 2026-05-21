@@ -8,6 +8,7 @@ if (!supabaseUrl || !supabaseKey) {
   throw new Error('Supabase URL and Anon Key are required in .env');
 }
 
+// Client for normal user authentication
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 module.exports = supabase;

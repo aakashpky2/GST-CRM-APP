@@ -6,8 +6,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import DashboardLayout from './layouts/DashboardLayout';
 
 // Pages
-import Login from './pages/ModernLogin';
-import Signup from './pages/Signup';
+import Login from './pages/Login';
+
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
 import Settings from './pages/Settings';
@@ -45,7 +45,7 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+
 
           {/* Protected Routes */}
           <Route path="/" element={
