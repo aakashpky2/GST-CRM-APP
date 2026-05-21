@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { RolesProvider } from './context/RolesContext';
 
 // Layouts
 import DashboardLayout from './layouts/DashboardLayout';
@@ -37,6 +38,7 @@ const ProtectedRoute = ({ children }) => {
 
 function App() {
   return (
+    <RolesProvider>
     <AuthProvider>
       <Router>
         <Toaster position="top-right" />
@@ -66,6 +68,7 @@ function App() {
         </Routes>
       </Router>
     </AuthProvider>
+    </RolesProvider>
   );
 }
 
