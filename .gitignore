@@ -18,6 +18,7 @@ server/node_modules/
 .env.production.local
 client/.env
 server/.env
+gst-platform/.env
 
 # IDE / Editor
 .vscode/
@@ -28,6 +29,7 @@ server/.env
 # Build output
 dist/
 client/dist/
+gst-platform/dist/
 
 # System files
 .DS_Store

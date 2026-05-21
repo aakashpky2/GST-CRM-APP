@@ -83,10 +83,14 @@ const DashboardLayout = () => {
 
   const crmMenus = [
     { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/' },
+    { icon: <Briefcase size={20} />, label: 'Projects', path: '/projects' },
     { 
       icon: <Lock size={20} />, 
       label: 'Admin Panel', 
-      submenus: [{ label: 'System Role', path: '/system-role' }] 
+      submenus: [
+        { label: 'System Role', path: '/system-role' },
+        { label: 'User Management', path: '/user-management' },
+      ] 
     },
   ];
 
