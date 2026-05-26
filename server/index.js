@@ -44,6 +44,19 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Debug env exists route for deployment diagnostics
+app.get('/debug-env', (req, res) => {
+  res.json({
+    PORT: process.env.PORT,
+    SUPABASE_URL_EXISTS: !!process.env.SUPABASE_URL,
+    SUPABASE_ANON_KEY_EXISTS: !!process.env.SUPABASE_ANON_KEY,
+    SUPABASE_SERVICE_ROLE_KEY_EXISTS: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    JWT_SECRET_EXISTS: !!process.env.JWT_SECRET,
+    CLIENT_URL: process.env.CLIENT_URL,
+    NODE_ENV: process.env.NODE_ENV
+  });
+});
+
 // Error Handling
 app.use(errorHandler);
 
