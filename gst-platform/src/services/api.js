@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { supabase } from '../supabase';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://gst-crm-app.onrender.com/api';
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'https://gst-crm-app.onrender.com/api';
+const API_URL = BACKEND_URL.endsWith('/api') ? BACKEND_URL : `${BACKEND_URL.replace(/\/$/, '')}/api`;
 
 const api = axios.create({
   baseURL: API_URL,

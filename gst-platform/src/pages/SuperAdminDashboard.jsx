@@ -53,7 +53,8 @@ const SuperAdminDashboard = () => {
   });
   const [loadingRequests, setLoadingRequests] = useState(false);
 
-  const API_BASE = import.meta.env.VITE_API_URL || 'https://gst-crm-app.onrender.com/api';
+  const BACKEND_URL = import.meta.env.VITE_API_URL || 'https://gst-crm-app.onrender.com';
+  const API_BASE = BACKEND_URL.endsWith('/api') ? BACKEND_URL : `${BACKEND_URL.replace(/\/$/, '')}/api`;
 
   const fetchCreditsAdminData = async () => {
     setLoadingRequests(true);
