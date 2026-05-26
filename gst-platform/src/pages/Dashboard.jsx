@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -20,12 +20,82 @@ import {
   Calendar,
   Calculator,
   Download,
-  ListChecks
+  ListChecks,
+  Coins,
+  History,
+  PlusCircle,
+  X,
+  Wallet
 } from 'lucide-react';
 import { gstModules, weeklyActivity, complianceUpdates } from '../data/mockData';
 import { motion } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const Dashboard = () => {
+  const [mounted, setMounted] = useState(false);
+  const { user } = useAuth();
+  
+  // Student Credit System States
+  const [credits, setCredits] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [showReqModal, setShowReqModal] = useState(false);
+  const [reqAmount, setReqAmount] = useState('');
+  const [reqReason, setReqReason] = useState('');
+  const [reqLoading, setReqLoading] = useState(false);
+
+  const fetchCreditsData = async () => {
+    try {
+      const credRes = await axios.get('http://localhost:5000/api/student/credits');
+      if (credRes.data.success) {
+        setCredits(credRes.data.credits);
+      }
+      const txRes = await axios.get('http://localhost:5000/api/student/credits/transactions');
+      if (txRes.data.success) {
+        setTransactions(txRes.data.transactions);
+      }
+    } catch (err) {
+      console.error('Error fetching credits data:', err);
+    }
+  };
+
+  useEffect(() => {
+    setMounted(true);
+    if (user?.role === 'student') {
+      fetchCreditsData();
+    }
+  }, [user]);
+
+  const handleRequestSubmit = async (e) => {
+    e.preventDefault();
+    if (!reqAmount || parseInt(reqAmount) <= 0) {
+      toast.error('Please enter a valid credit amount.');
+      return;
+    }
+    if (!reqReason.trim()) {
+      toast.error('Please enter a reason for the credit request.');
+      return;
+    }
+
+    setReqLoading(true);
+    try {
+      const res = await axios.post('http://localhost:5000/api/student/credits/request', {
+        requested_credits: parseInt(reqAmount),
+        reason: reqReason.trim()
+      });
+
+      if (res.data.success) {
+        toast.success('Credit request submitted successfully.');
+        setShowReqModal(false);
+        fetchCreditsData(); // Refresh history
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to submit credit request.');
+    } finally {
+      setReqLoading(false);
+    }
+  };
   return (
     <div className="space-y-8 pb-10">
       {/* Welcome Card */}
@@ -110,32 +180,34 @@ const Dashboard = () => {
             </select>
           </div>
           <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weeklyActivity}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: '#94A3B8', fontSize: 12, fontWeight: 600 }}
-                  dy={10}
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: '#94A3B8', fontSize: 12, fontWeight: 600 }}
-                />
-                <Tooltip 
-                  cursor={{ fill: '#F8FAFC' }}
-                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                />
-                <Bar dataKey="hours" radius={[6, 6, 0, 0]} barSize={40}>
-                  {weeklyActivity.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.hours > 3 ? '#0EA5E9' : '#E2E8F0'} className="transition-all hover:fill-cyan-500" />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            {mounted && (
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                <BarChart data={weeklyActivity}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#94A3B8', fontSize: 12, fontWeight: 600 }}
+                    dy={10}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#94A3B8', fontSize: 12, fontWeight: 600 }}
+                  />
+                  <Tooltip 
+                    cursor={{ fill: '#F8FAFC' }}
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                  />
+                  <Bar dataKey="hours" radius={[6, 6, 0, 0]} barSize={40}>
+                    {weeklyActivity.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.hours > 3 ? '#0EA5E9' : '#E2E8F0'} className="transition-all hover:fill-cyan-500" />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </motion.div>
 
@@ -181,6 +253,204 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Student Credit Wallet System */}
+      {user?.role === 'student' && (
+        <div className="space-y-6 mt-8">
+          <div className="flex sm:flex-row flex-col sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div>
+              <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2">
+                <Coins className="text-cyan-500 animate-bounce" size={26} />
+                Credit Wallet System
+              </h2>
+              <p className="text-slate-500 text-xs mt-0.5">Manage your learning service tokens and active credits</p>
+            </div>
+            <button
+              onClick={() => { setReqAmount(''); setReqReason(''); setShowReqModal(true); }}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-cyan-600 text-white rounded-xl font-bold text-sm transition-all hover:bg-cyan-700 active:scale-95 shadow-sm shadow-cyan-600/10 self-start sm:self-auto"
+            >
+              <PlusCircle size={16} />
+              Request Credits
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Total Credits */}
+            <div className="bg-gradient-to-br from-indigo-500 to-blue-600 p-6 rounded-3xl text-white shadow-lg shadow-indigo-500/10 relative overflow-hidden">
+              <div className="absolute right-0 bottom-0 opacity-10 translate-x-2 translate-y-2 pointer-events-none">
+                <Coins size={140} />
+              </div>
+              <p className="text-indigo-100 text-xs font-bold uppercase tracking-wider">Total Credits Assigned</p>
+              <p className="text-4xl font-extrabold mt-2">{credits?.total_credits ?? 0}</p>
+              <div className="mt-4 flex items-center gap-2 text-indigo-100/80 text-xs">
+                <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                <span>Accumulated learning credits</span>
+              </div>
+            </div>
+
+            {/* Used Credits */}
+            <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-6 rounded-3xl text-white shadow-lg shadow-emerald-500/10 relative overflow-hidden">
+              <div className="absolute right-0 bottom-0 opacity-10 translate-x-2 translate-y-2 pointer-events-none">
+                <Coins size={140} />
+              </div>
+              <p className="text-emerald-100 text-xs font-bold uppercase tracking-wider">Used Credits</p>
+              <p className="text-4xl font-extrabold mt-2">{credits?.used_credits ?? 0}</p>
+              <div className="mt-4 flex items-center gap-2 text-emerald-100/80 text-xs">
+                <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                <span>Burned on credit-based modules</span>
+              </div>
+            </div>
+
+            {/* Remaining Credits */}
+            <div className="bg-gradient-to-br from-cyan-500 to-sky-600 p-6 rounded-3xl text-white shadow-lg shadow-cyan-500/10 relative overflow-hidden">
+              <div className="absolute right-0 bottom-0 opacity-10 translate-x-2 translate-y-2 pointer-events-none">
+                <Coins size={140} />
+              </div>
+              <p className="text-cyan-100 text-xs font-bold uppercase tracking-wider">Remaining Credits</p>
+              <p className="text-4xl font-extrabold mt-2">{credits?.remaining_credits ?? 0}</p>
+              <div className="mt-4 flex items-center gap-2 text-cyan-100/80 text-xs">
+                <div className={`w-1.5 h-1.5 rounded-full ${credits?.remaining_credits > 10 ? 'bg-white' : 'bg-red-400 animate-ping'}`} />
+                <span>{credits?.remaining_credits === 0 ? 'Insufficient credits - request more' : 'Active and available to burn'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Credit Usage History Table */}
+          <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 overflow-hidden">
+            <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
+              <History size={18} className="text-slate-500" />
+              Credit Transaction History
+            </h3>
+            {transactions.length === 0 ? (
+              <div className="py-10 text-center text-slate-400 text-sm">
+                No credit transactions recorded yet.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-slate-400 font-bold">
+                      <th className="py-3 px-4">Transaction Type</th>
+                      <th className="py-3 px-4">Credits</th>
+                      <th className="py-3 px-4">Balance After</th>
+                      <th className="py-3 px-4">Description</th>
+                      <th className="py-3 px-4">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactions.map((tx) => {
+                      const typeColors = {
+                        credit_added: 'bg-indigo-50 text-indigo-700 border-indigo-100',
+                        credit_used: 'bg-rose-50 text-rose-700 border-rose-100',
+                        credit_request_approved: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                        credit_request_rejected: 'bg-red-50 text-red-700 border-red-100',
+                      };
+                      const typeLabels = {
+                        credit_added: 'Credit Added',
+                        credit_used: 'Credit Used',
+                        credit_request_approved: 'Request Approved',
+                        credit_request_rejected: 'Request Rejected',
+                      };
+                      return (
+                        <tr key={tx.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-all font-medium text-slate-700">
+                          <td className="py-3.5 px-4">
+                            <span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-bold border ${typeColors[tx.transaction_type] || 'bg-slate-50 text-slate-600'}`}>
+                              {typeLabels[tx.transaction_type] || tx.transaction_type}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 font-bold text-slate-800">
+                            {tx.transaction_type === 'credit_used' || tx.transaction_type === 'credit_request_rejected' ? '-' : '+'}{tx.credits}
+                          </td>
+                          <td className="py-3.5 px-4 font-bold text-slate-900">{tx.balance_after}</td>
+                          <td className="py-3.5 px-4 text-slate-500">{tx.description}</td>
+                          <td className="py-3.5 px-4 text-slate-400 text-xs">
+                            {new Date(tx.created_at).toLocaleString()}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Request Credits Modal */}
+      {showReqModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl border border-slate-100 overflow-hidden flex flex-col"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100 bg-slate-50/50">
+              <div className="flex items-center gap-2">
+                <Coins className="text-cyan-500" size={24} />
+                <h3 className="text-xl font-black text-slate-850">Request Credits</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReqModal(false)}
+                className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-650 hover:bg-slate-50 active:scale-95 transition-all"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form id="request-credits-form" onSubmit={handleRequestSubmit} className="p-8 space-y-6">
+              {/* Requested credits */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Requested Credits *</label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  placeholder="e.g. 50"
+                  value={reqAmount}
+                  onChange={e => setReqAmount(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:bg-white focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 transition-all"
+                />
+              </div>
+
+              {/* Reason */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Reason / Message *</label>
+                <textarea
+                  required
+                  rows="4"
+                  placeholder="Tell the Super Admin why you need more credits..."
+                  value={reqReason}
+                  onChange={e => setReqReason(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:bg-white focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 transition-all resize-none"
+                />
+              </div>
+            </form>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-3 px-8 py-5 border-t border-slate-100 bg-white">
+              <button
+                type="button"
+                onClick={() => setShowReqModal(false)}
+                className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-500 text-sm font-bold hover:bg-slate-50 active:scale-95 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="request-credits-form"
+                disabled={reqLoading}
+                className="px-6 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-bold active:scale-95 disabled:opacity-50 disabled:pointer-events-none shadow-sm shadow-cyan-600/15 transition-all"
+              >
+                {reqLoading ? 'Submitting...' : 'Submit Request'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

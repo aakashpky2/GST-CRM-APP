@@ -16,6 +16,7 @@ import SystemRole from './pages/SystemRole';
 import UserManagement from './pages/UserManagement';
 import Projects from './pages/Projects';
 import Settings from './pages/Settings';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -36,6 +37,116 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+// Super Admin Protected Route Component
+const SuperAdminRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-[#060B18]">
+        <div className="w-10 h-10 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+  
+  // If no user is logged in, redirect to the existing login page
+  if (!user) {
+    console.log('SuperAdminRoute: No user logged in. Redirecting to /login');
+    return <Navigate to="/login" replace />;
+  }
+  
+  // If logged-in user is not superadmin, redirect them to their correct dashboard
+  if (user.role !== 'superadmin') {
+    console.log(`SuperAdminRoute: User role '${user.role}' is not superadmin. Redirecting to correct dashboard.`);
+    
+    let targetDashboard = '/';
+    if (user.role === 'admin') {
+      targetDashboard = '/admin/dashboard';
+    } else if (user.role === 'institute') {
+      targetDashboard = '/institute/dashboard';
+    } else if (user.role === 'manager') {
+      targetDashboard = '/manager/dashboard';
+    } else if (user.role === 'student') {
+      targetDashboard = '/student/dashboard';
+    }
+    
+    return <Navigate to={targetDashboard} replace />;
+  }
+  
+  return children;
+};
+
+// Admin Panel Protected Route Component
+const AdminPanelRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-[#F8FAFC]">
+        <div className="w-10 h-10 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  const hasAdminPanel = 
+    user.role === 'superadmin' || 
+    user.role === 'admin' || 
+    user.permissions?.admin_panel === true ||
+    user.permissions === undefined;
+
+  if (!hasAdminPanel) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 bg-white rounded-[2rem] border border-slate-100 shadow-sm mt-10 max-w-xl mx-auto text-center">
+        <h1 className="text-2xl font-bold text-slate-800 mb-2">Access Denied</h1>
+        <p className="text-slate-500 text-sm">You do not have permission to access the Admin Panel. Contact your administrator for access.</p>
+      </div>
+    );
+  }
+  
+  return children;
+};
+
+// Learning Service Protected Route Component
+const LearningServiceRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-[#F8FAFC]">
+        <div className="w-10 h-10 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  const hasLearningService = 
+    user.role === 'superadmin' || 
+    user.role === 'admin' || 
+    user.role === 'manager' || 
+    user.role === 'institute' || 
+    user.role === 'student' || 
+    user.permissions?.learning_service === true ||
+    user.permissions === undefined;
+
+  if (!hasLearningService) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 bg-white rounded-[2rem] border border-slate-100 shadow-sm mt-10 max-w-xl mx-auto text-center">
+        <h1 className="text-2xl font-bold text-slate-800 mb-2">Access Denied</h1>
+        <p className="text-slate-500 text-sm">You do not have permission to access the Learning Service. Contact your administrator for access.</p>
+      </div>
+    );
+  }
+  
+  return children;
+};
+
 function App() {
   return (
     <RolesProvider>
@@ -45,6 +156,13 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
+          
+          {/* Super Admin Routes */}
+          <Route path="/superadmin/dashboard" element={
+            <SuperAdminRoute>
+              <SuperAdminDashboard />
+            </SuperAdminRoute>
+          } />
 
           {/* Protected Routes */}
           <Route path="/" element={
@@ -53,14 +171,14 @@ function App() {
             </ProtectedRoute>
           }>
             <Route index element={<Dashboard />} />
-            <Route path="modules" element={<Modules />} />
-            <Route path="modules/:id" element={<ModuleDetail />} />
-            <Route path="compliance" element={<div className="p-8"><h1 className="text-2xl font-bold">Compliance Updates</h1><p className="text-slate-500 mt-2">Feature coming soon...</p></div>} />
-            <Route path="resources" element={<div className="p-8"><h1 className="text-2xl font-bold">Resources</h1><p className="text-slate-500 mt-2">Feature coming soon...</p></div>} />
+            <Route path="modules" element={<LearningServiceRoute><Modules /></LearningServiceRoute>} />
+            <Route path="modules/:id" element={<LearningServiceRoute><ModuleDetail /></LearningServiceRoute>} />
+            <Route path="compliance" element={<LearningServiceRoute><div className="p-8"><h1 className="text-2xl font-bold">Compliance Updates</h1><p className="text-slate-500 mt-2">Feature coming soon...</p></div></LearningServiceRoute>} />
+            <Route path="resources" element={<LearningServiceRoute><div className="p-8"><h1 className="text-2xl font-bold">Resources</h1><p className="text-slate-500 mt-2">Feature coming soon...</p></div></LearningServiceRoute>} />
             <Route path="settings" element={<Settings />} />
             <Route path="projects" element={<Projects />} />
-            <Route path="system-role" element={<SystemRole />} />
-            <Route path="user-management" element={<UserManagement />} />
+            <Route path="system-role" element={<AdminPanelRoute><SystemRole /></AdminPanelRoute>} />
+            <Route path="user-management" element={<AdminPanelRoute><UserManagement /></AdminPanelRoute>} />
           </Route>
 
           {/* Catch all */}

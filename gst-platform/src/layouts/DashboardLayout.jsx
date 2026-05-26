@@ -161,6 +161,17 @@ const DashboardLayout = () => {
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">Main Management</p>
             )}
             {crmMenus.map((item) => {
+              // Hide Admin Panel completely if user does not have permission
+              const hasAdminPanel = 
+                user?.role === 'superadmin' || 
+                user?.role === 'admin' || 
+                user?.permissions?.admin_panel === true ||
+                (user && user.permissions === undefined); // Fallback for active legacy sessions
+
+              if (item.label === 'Admin Panel' && !hasAdminPanel) {
+                return null;
+              }
+
               if (item.submenus) {
                 const hasActiveSub = item.submenus.some(sub => location.pathname === sub.path);
                 return (
@@ -223,64 +234,72 @@ const DashboardLayout = () => {
           </div>
 
           {/* Learning Services Section */}
-          <div className="space-y-1.5">
-            {isSidebarOpen && (
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">Learning Services</p>
-            )}
-            {learningServices.map((section) => (
-              <div key={section.label} className="space-y-1">
-                <SidebarItem
-                  icon={section.icon}
-                  label={section.label}
-                  path="#"
-                  isOpen={isSidebarOpen}
-                  isActive={false}
-                  hasSubmenu={true}
-                  isExpanded={expandedMenus[section.label]}
-                  onClick={() => toggleSubmenu(section.label)}
-                />
-                
-                <AnimatePresence>
-                  {isSidebarOpen && expandedMenus[section.label] && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="ml-9 mt-1 space-y-1 border-l-2 border-slate-100 pl-3">
-                        {section.submenus.map((sub) => {
-                          if (sub === 'GST Registration') {
+          {(user?.role === 'superadmin' || 
+            user?.role === 'admin' || 
+            user?.role === 'manager' || 
+            user?.role === 'institute' || 
+            user?.role === 'student' || 
+            user?.permissions?.learning_service === true ||
+            (user && user.permissions === undefined)) && (
+            <div className="space-y-1.5">
+              {isSidebarOpen && (
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">Learning Services</p>
+              )}
+              {learningServices.map((section) => (
+                <div key={section.label} className="space-y-1">
+                  <SidebarItem
+                    icon={section.icon}
+                    label={section.label}
+                    path="#"
+                    isOpen={isSidebarOpen}
+                    isActive={false}
+                    hasSubmenu={true}
+                    isExpanded={expandedMenus[section.label]}
+                    onClick={() => toggleSubmenu(section.label)}
+                  />
+                  
+                  <AnimatePresence>
+                    {isSidebarOpen && expandedMenus[section.label] && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="ml-9 mt-1 space-y-1 border-l-2 border-slate-100 pl-3">
+                          {section.submenus.map((sub) => {
+                            if (sub === 'GST Registration') {
+                              return (
+                                <a
+                                  key={sub}
+                                  href="https://gst-app-gamma.vercel.app/"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block py-1.5 text-sm text-slate-500 hover:text-cyan-600 transition-colors"
+                                >
+                                  {sub}
+                                </a>
+                              );
+                            }
                             return (
-                              <a
+                              <Link
                                 key={sub}
-                                href="https://gst-app-gamma.vercel.app/"
-                                target="_blank"
-                                rel="noopener noreferrer"
+                                to="#"
                                 className="block py-1.5 text-sm text-slate-500 hover:text-cyan-600 transition-colors"
                               >
                                 {sub}
-                              </a>
+                              </Link>
                             );
-                          }
-                          return (
-                            <Link
-                              key={sub}
-                              to="#"
-                              className="block py-1.5 text-sm text-slate-500 hover:text-cyan-600 transition-colors"
-                            >
-                              {sub}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            ))}
-          </div>
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="p-4 mt-auto border-t border-slate-100 bg-white">
@@ -325,7 +344,9 @@ const DashboardLayout = () => {
                 <p className="text-sm font-bold text-slate-900">
                   {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
                 </p>
-                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Administrator</p>
+                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
+                  {user?.role === 'superadmin' ? 'Super Admin' : user?.role === 'admin' ? 'Administrator' : user?.role || 'User'}
+                </p>
               </div>
               <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 border border-slate-200 shadow-sm">
                 <User size={20} />
@@ -342,7 +363,7 @@ const DashboardLayout = () => {
         </div>
       </main>
 
-      <style jsx global>{`
+      <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 4px;
         }

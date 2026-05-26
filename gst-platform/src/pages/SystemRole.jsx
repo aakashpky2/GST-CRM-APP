@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRoles } from '../context/RolesContext';
 import { toast } from 'react-hot-toast';
 
-const PERMISSION_OPTIONS = ['Channel', 'Institute', 'Manager', 'Students'];
+const PERMISSION_OPTIONS = ['Admin Panel', 'Learning Service'];
 
 const STATUS_BADGE = {
   Active:   'bg-emerald-50 text-emerald-700 border-emerald-100',

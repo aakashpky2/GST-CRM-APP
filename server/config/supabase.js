@@ -3,6 +3,7 @@ require('dotenv').config();
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   throw new Error('Supabase URL and Anon Key are required in .env');
@@ -10,5 +11,18 @@ if (!supabaseUrl || !supabaseKey) {
 
 // Client for normal user authentication
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Client with administrative privileges (service role)
+const supabaseAdmin = supabaseServiceKey 
+  ? createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+  : supabase;
+
+// Attach supabaseAdmin to the default supabase export for maximum backward compatibility
+supabase.supabaseAdmin = supabaseAdmin;
 
 module.exports = supabase;

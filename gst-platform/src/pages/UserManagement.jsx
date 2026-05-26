@@ -62,6 +62,8 @@ const UserManagement = () => {
   const [institute,  setInstitute]  = useState('');
   const [manager,    setManager]    = useState('');
   const [isActive,   setIsActive]   = useState(true);
+  const [permAdminPanel, setPermAdminPanel] = useState(false);
+  const [permLearningService, setPermLearningService] = useState(false);
 
   /* ─── Helpers ─── */
   const getRoleById   = (id)   => roles.find(r => r.id === id);
@@ -84,10 +86,25 @@ const UserManagement = () => {
     setFullName(''); setEmail(''); setUsername(''); setPassword('');
     setRoleId(''); setChannel(''); setInstitute(''); setManager('');
     setIsActive(true); setError('');
+    setPermAdminPanel(false); setPermLearningService(false);
   };
 
   const openModal  = () => { resetForm(); setModalOpen(true); };
   const closeModal = () => setModalOpen(false);
+
+  const handleRoleChange = (selectedRoleId) => {
+    setRoleId(selectedRoleId);
+    setChannel('');
+    setInstitute('');
+    setManager('');
+    
+    // Automatically match the role's default permissions
+    const selRole = roles.find(r => r.id === selectedRoleId);
+    if (selRole) {
+      setPermAdminPanel(selRole.permissions.includes('Admin Panel'));
+      setPermLearningService(selRole.permissions.includes('Learning Service'));
+    }
+  };
 
   /* ─── Create user ─── */
   const handleCreate = (e) => {
@@ -108,6 +125,10 @@ const UserManagement = () => {
       manager:   manager   || '—',
       status:    isActive ? 'Active' : 'Inactive',
       created:   new Date().toISOString().split('T')[0],
+      permissions: {
+        admin_panel: permAdminPanel,
+        learning_service: permLearningService
+      }
     };
 
     setUsers(prev => [...prev, newUser]);
@@ -342,7 +363,7 @@ const UserManagement = () => {
                       <div className="relative">
                         <select
                           value={roleId}
-                          onChange={e => { setRoleId(e.target.value); setChannel(''); setInstitute(''); setManager(''); }}
+                          onChange={e => handleRoleChange(e.target.value)}
                           className="w-full appearance-none px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-900 font-medium focus:bg-white focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 outline-none cursor-pointer"
                         >
                           <option value="">Select active role...</option>
@@ -372,6 +393,31 @@ const UserManagement = () => {
                     <Select label="Manager" value={manager} onChange={setManager}
                       options={DUMMY_MANAGERS} placeholder="Select manager..." />
                   )}
+
+                  {/* Permissions Selection */}
+                  <div className="space-y-3">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Permissions</label>
+                    <div className="flex gap-6 pl-1">
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={permAdminPanel}
+                          onChange={(e) => setPermAdminPanel(e.target.checked)}
+                          className="w-4 h-4 rounded text-cyan-600 border-slate-300 focus:ring-cyan-500 cursor-pointer"
+                        />
+                        <span className="text-sm font-semibold text-slate-700">Admin Panel</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={permLearningService}
+                          onChange={(e) => setPermLearningService(e.target.checked)}
+                          className="w-4 h-4 rounded text-cyan-600 border-slate-300 focus:ring-cyan-500 cursor-pointer"
+                        />
+                        <span className="text-sm font-semibold text-slate-700">Learning Service</span>
+                      </label>
+                    </div>
+                  </div>
 
                   {/* Status Toggle */}
                   <div>

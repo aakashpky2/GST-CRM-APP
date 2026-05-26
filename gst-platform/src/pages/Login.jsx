@@ -44,17 +44,37 @@ const Login = () => {
       console.log('Calling login function from context...');
       const result = await login(formData.email, formData.password);
       
-      console.log('Login Result from Context:', result);
+      console.log('Login API Response received in Login.jsx:', result);
 
       if (result.success) {
+        const userRole = result.user?.role;
+        console.log('LOGIN SUCCESSFUL. User details:', result.user);
+        console.log('USER ROLE RESOLVED:', userRole);
         toast.success('Welcome back!');
-        navigate('/');
+
+        // Resolve target redirect path based on user role
+        let redirectPath = '/';
+        if (userRole === 'superadmin') {
+          redirectPath = '/superadmin/dashboard';
+        } else if (userRole === 'admin') {
+          redirectPath = '/admin/dashboard';
+        } else if (userRole === 'institute') {
+          redirectPath = '/institute/dashboard';
+        } else if (userRole === 'manager') {
+          redirectPath = '/manager/dashboard';
+        } else if (userRole === 'student') {
+          redirectPath = '/student/dashboard';
+        }
+
+        console.log('DETERMINED REDIRECT PATH:', redirectPath);
+        navigate(redirectPath);
       } else {
-        toast.error(result.message || 'Invalid email or password');
+        console.log('LOGIN FAIL: Invalid credentials');
+        toast.error('Invalid email or password');
       }
     } catch (error) {
       console.log('UNEXPECTED ERROR IN SUBMIT HANDLER:', error);
-      toast.error('An unexpected error occurred. Check console for details.');
+      toast.error('Invalid email or password');
     } finally {
       setLoading(false);
       console.log('--- LOGIN SUBMIT FINISHED ---');
@@ -93,7 +113,6 @@ const Login = () => {
 
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-white tracking-tight mb-1">GST Platform</h1>
-            <p className="text-slate-400 text-sm italic">Admin-Managed Login</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -157,10 +176,6 @@ const Login = () => {
               {loading ? <Loader2 className="animate-spin" size={20} /> : 'Secure Login'}
             </button>
           </form>
-
-          <p className="text-center text-slate-600 text-[10px] uppercase font-bold tracking-widest mt-10">
-            Contact your administrator for access
-          </p>
         </div>
       </motion.div>
     </div>
