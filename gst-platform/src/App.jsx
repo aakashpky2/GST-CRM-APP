@@ -128,10 +128,6 @@ const LearningServiceRoute = ({ children }) => {
   
   const hasLearningService = 
     user.role === 'superadmin' || 
-    user.role === 'admin' || 
-    user.role === 'manager' || 
-    user.role === 'institute' || 
-    user.role === 'student' || 
     user.permissions?.learning_service === true ||
     user.permissions === undefined;
 
@@ -171,6 +167,7 @@ function App() {
             </ProtectedRoute>
           }>
             <Route index element={<Dashboard />} />
+            <Route path="student/dashboard" element={<Dashboard />} />
             <Route path="modules" element={<LearningServiceRoute><Modules /></LearningServiceRoute>} />
             <Route path="modules/:id" element={<LearningServiceRoute><ModuleDetail /></LearningServiceRoute>} />
             <Route path="compliance" element={<LearningServiceRoute><div className="p-8"><h1 className="text-2xl font-bold">Compliance Updates</h1><p className="text-slate-500 mt-2">Feature coming soon...</p></div></LearningServiceRoute>} />

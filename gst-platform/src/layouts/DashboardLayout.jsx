@@ -235,10 +235,6 @@ const DashboardLayout = () => {
 
           {/* Learning Services Section */}
           {(user?.role === 'superadmin' || 
-            user?.role === 'admin' || 
-            user?.role === 'manager' || 
-            user?.role === 'institute' || 
-            user?.role === 'student' || 
             user?.permissions?.learning_service === true ||
             (user && user.permissions === undefined)) && (
             <div className="space-y-1.5">
