@@ -19,8 +19,15 @@ app.use((req, res, next) => {
   next();
 });
 app.use(helmet());
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5175',
+  'https://gst-crm-app.vercel.app',
+  process.env.CLIENT_URL
+].filter(Boolean);
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5175'],
+  origin: allowedOrigins,
   credentials: true
 }));
 app.use(morgan('dev'));

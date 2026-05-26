@@ -53,10 +53,12 @@ const SuperAdminDashboard = () => {
   });
   const [loadingRequests, setLoadingRequests] = useState(false);
 
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
   const fetchCreditsAdminData = async () => {
     setLoadingRequests(true);
     try {
-      const reqRes = await axios.get('http://localhost:5000/api/superadmin/credit-requests');
+      const reqRes = await axios.get(`${API_BASE}/superadmin/credit-requests`);
       if (reqRes.data.success) {
         setCreditRequests(reqRes.data.requests);
         
@@ -74,7 +76,7 @@ const SuperAdminDashboard = () => {
         }));
       }
       
-      const txRes = await axios.get('http://localhost:5000/api/superadmin/credit-transactions');
+      const txRes = await axios.get(`${API_BASE}/superadmin/credit-transactions`);
       if (txRes.data.success) {
         setCreditTransactions(txRes.data.transactions);
         
@@ -107,7 +109,7 @@ const SuperAdminDashboard = () => {
 
   const handleApprove = async (id) => {
     try {
-      const res = await axios.post(`http://localhost:5000/api/superadmin/credit-requests/${id}/approve`);
+      const res = await axios.post(`${API_BASE}/superadmin/credit-requests/${id}/approve`);
       if (res.data.success) {
         toast.success('Credits added successfully.');
         fetchCreditsAdminData();
@@ -119,7 +121,7 @@ const SuperAdminDashboard = () => {
 
   const handleReject = async (id) => {
     try {
-      const res = await axios.post(`http://localhost:5000/api/superadmin/credit-requests/${id}/reject`);
+      const res = await axios.post(`${API_BASE}/superadmin/credit-requests/${id}/reject`);
       if (res.data.success) {
         toast.success('Credit request rejected.');
         fetchCreditsAdminData();

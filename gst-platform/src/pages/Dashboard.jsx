@@ -45,13 +45,15 @@ const Dashboard = () => {
   const [reqReason, setReqReason] = useState('');
   const [reqLoading, setReqLoading] = useState(false);
 
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
   const fetchCreditsData = async () => {
     try {
-      const credRes = await axios.get('http://localhost:5000/api/student/credits');
+      const credRes = await axios.get(`${API_BASE}/student/credits`);
       if (credRes.data.success) {
         setCredits(credRes.data.credits);
       }
-      const txRes = await axios.get('http://localhost:5000/api/student/credits/transactions');
+      const txRes = await axios.get(`${API_BASE}/student/credits/transactions`);
       if (txRes.data.success) {
         setTransactions(txRes.data.transactions);
       }
@@ -80,7 +82,7 @@ const Dashboard = () => {
 
     setReqLoading(true);
     try {
-      const res = await axios.post('http://localhost:5000/api/student/credits/request', {
+      const res = await axios.post(`${API_BASE}/student/credits/request`, {
         requested_credits: parseInt(reqAmount),
         reason: reqReason.trim()
       });
