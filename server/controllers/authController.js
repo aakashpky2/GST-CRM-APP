@@ -22,11 +22,12 @@ exports.login = async (req, res, next) => {
     const { data: dbUser, error } = await supabase.supabaseAdmin
       .from('users')
       .select('*')
-      .or(`username.eq.${email},email.eq.${email}`)
+      .eq('username', email)
       .maybeSingle();
 
-    console.log('DB USER FOUND:', dbUser);
-    console.log('SUPABASE ERROR:', error);
+    console.log("LOGIN BODY:", req.body);
+    console.log("DB USER:", dbUser);
+    console.log("SUPABASE ERROR:", error);
 
     if (error || !dbUser) {
       console.log('LOGIN FAILED: User not found');
@@ -36,6 +37,7 @@ exports.login = async (req, res, next) => {
       });
     }
 
+    console.log("USER STATUS:", dbUser?.status);
     if (dbUser.status !== 'active') {
       console.log(`LOGIN FAILED: User status is ${dbUser.status}`);
       return res.status(401).json({
@@ -44,6 +46,7 @@ exports.login = async (req, res, next) => {
       });
     }
 
+    console.log("HASH EXISTS:", !!dbUser?.password_hash);
     if (!dbUser.password_hash) {
       console.log('LOGIN FAILED: password_hash missing');
       return res.status(401).json({
@@ -52,9 +55,10 @@ exports.login = async (req, res, next) => {
       });
     }
 
+    console.log("PASSWORD RECEIVED EXISTS:", !!password);
     const isMatch = await bcrypt.compare(password, dbUser.password_hash);
 
-    console.log('PASSWORD MATCH:', isMatch);
+    console.log("PASSWORD MATCH:", isMatch);
 
     if (!isMatch) {
       console.log('LOGIN FAILED: Password mismatch');

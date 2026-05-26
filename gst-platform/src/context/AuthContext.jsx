@@ -48,6 +48,10 @@ export const AuthProvider = ({ children }) => {
     console.log('>>>> AUTH_CONTEXT: login() called');
     console.log('>>>> DATA RECEIVED: email:', email, 'passwordExists:', !!password);
 
+    console.log('VITE_API_URL ENV VALUE:', import.meta.env.VITE_API_URL);
+    console.log('FINAL RESOLVED API URL:', `${API_URL}/auth/login`);
+    console.log('REQUEST PAYLOAD SENT TO BACKEND:', { email, password: '***' });
+
     try {
       const response = await axios.post(`${API_URL}/auth/login`, { email, password });
       
