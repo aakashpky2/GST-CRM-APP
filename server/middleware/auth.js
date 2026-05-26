@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+const supabase = require('../config/supabase');
 
 exports.protect = async (req, res, next) => {
   let token;
@@ -21,18 +21,66 @@ exports.protect = async (req, res, next) => {
   }
 
   try {
-    // 1. Verify our custom JWT
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    console.log('JWT VERIFICATION SUCCESS: User ID', decoded.id);
+    // Validate token with Supabase Auth
+    const { data: { user }, error } = await supabase.auth.getUser(token);
 
-    // 2. Attach decoded user info to request
-    req.user = decoded;
-    
+    if (error || !user) {
+      console.log('SUPABASE JWT VERIFICATION FAILED:', error?.message || 'No user returned');
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token',
+      });
+    }
+
+    console.log('SUPABASE JWT VERIFICATION SUCCESS: User ID', user.id);
+
+    // Fetch profile details from public.users to attach role/permissions
+    const { data: dbUser, error: dbError } = await supabase.supabaseAdmin
+      .from('users')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (dbError || !dbUser) {
+      console.log('USER PROFILE NOT FOUND FOR AUTH ID:', user.id);
+      return res.status(401).json({
+        success: false,
+        message: 'User profile is not configured. Please contact admin.',
+      });
+    }
+
+    if (dbUser.status !== 'active') {
+      console.log('USER ACCOUNT INACTIVE FOR AUTH ID:', user.id);
+      return res.status(401).json({
+        success: false,
+        message: 'Your account is inactive. Please contact admin.',
+      });
+    }
+
+    let permissions = dbUser.permissions;
+    if (!permissions) {
+      if (dbUser.role === 'admin' || dbUser.role === 'superadmin') {
+        permissions = { admin_panel: true, learning_service: true };
+      } else if (dbUser.role === 'student' || dbUser.role === 'manager' || dbUser.role === 'institute') {
+        permissions = { admin_panel: false, learning_service: true };
+      } else {
+        permissions = { admin_panel: false, learning_service: false };
+      }
+    }
+
+    req.user = {
+      id: dbUser.id,
+      email: dbUser.username,
+      username: dbUser.username,
+      role: dbUser.role,
+      status: dbUser.status,
+      permissions
+    };
+
     console.log('---------------- PROTECT MIDDLEWARE DONE ----------------');
     next();
   } catch (error) {
-    console.log('JWT VERIFICATION FAILED:', error.message);
+    console.log('UNEXPECTED PROTECT ERROR:', error.message);
     return res.status(401).json({
       success: false,
       message: 'Invalid or expired token',

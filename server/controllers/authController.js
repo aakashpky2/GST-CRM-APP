@@ -19,57 +19,53 @@ exports.login = async (req, res, next) => {
   }
 
   try {
-    const { data: dbUser, error } = await supabase.supabaseAdmin
+    console.log('AUTHENTICATING WITH SUPABASE AUTH...');
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (authError) {
+      console.log('SUPABASE AUTH ERROR:', authError.message);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
+      });
+    }
+
+    const { user, session } = authData;
+    console.log('SUPABASE AUTH SUCCESS! User ID:', user.id);
+
+    // Fetch user profile from public.users table using the auth user's ID
+    const { data: dbUser, error: dbError } = await supabase.supabaseAdmin
       .from('users')
       .select('*')
-      .eq('username', email)
+      .eq('id', user.id)
       .maybeSingle();
 
-    console.log("LOGIN BODY:", req.body);
-    console.log("DB USER:", dbUser);
-    console.log("SUPABASE ERROR:", error);
+    console.log('DB PROFILE RETRIEVAL:', dbUser);
+    if (dbError) {
+      console.error('SUPABASE DB ERROR:', dbError.message);
+    }
 
-    if (error || !dbUser) {
-      console.log('LOGIN FAILED: User not found');
+    if (dbError || !dbUser) {
+      console.log('LOGIN BLOCKED: User profile not configured for ID:', user.id);
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
+        message: 'User profile is not configured. Please contact admin.'
       });
     }
 
-    console.log("USER STATUS:", dbUser?.status);
+    console.log("USER STATUS:", dbUser.status);
     if (dbUser.status !== 'active') {
-      console.log(`LOGIN FAILED: User status is ${dbUser.status}`);
+      console.log('LOGIN BLOCKED: User account status is inactive:', dbUser.status);
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
-      });
-    }
-
-    console.log("HASH EXISTS:", !!dbUser?.password_hash);
-    if (!dbUser.password_hash) {
-      console.log('LOGIN FAILED: password_hash missing');
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
-      });
-    }
-
-    console.log("PASSWORD RECEIVED EXISTS:", !!password);
-    const isMatch = await bcrypt.compare(password, dbUser.password_hash);
-
-    console.log("PASSWORD MATCH:", isMatch);
-
-    if (!isMatch) {
-      console.log('LOGIN FAILED: Password mismatch');
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
+        message: 'Your account is inactive. Please contact admin.'
       });
     }
 
     let permissions = dbUser.permissions;
-
     if (!permissions) {
       if (dbUser.role === 'admin' || dbUser.role === 'superadmin') {
         permissions = {
@@ -93,26 +89,14 @@ exports.login = async (req, res, next) => {
       }
     }
 
-    const token = jwt.sign(
-      {
-        id: dbUser.id,
-        username: dbUser.username,
-        email: dbUser.email || dbUser.username,
-        role: dbUser.role,
-        permissions
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
     console.log(`LOGIN SUCCESS: ${dbUser.username} as ${dbUser.role}`);
 
     return res.status(200).json({
       success: true,
-      token,
+      token: session.access_token,
       user: {
         id: dbUser.id,
-        email: dbUser.email || dbUser.username,
+        email: dbUser.username,
         username: dbUser.username,
         role: dbUser.role,
         status: dbUser.status,
