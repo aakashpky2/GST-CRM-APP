@@ -16,7 +16,7 @@ const DUMMY_CHANNELS   = ['North', 'South', 'East', 'West'];
 const DUMMY_INSTITUTES = ['IIM Ahmedabad', 'IIT Madras', 'Delhi University', 'BITS Pilani'];
 const DUMMY_MANAGERS   = ['Aarav Sharma', 'Sunita Gupta'];
 
-const FILTER_OPTIONS = ['All Users', 'Channel', 'Institute', 'Manager', 'Students'];
+const FILTER_OPTIONS = ['All Users', 'Students'];
 
 /* ─── Reusable Select ─── */
 const Select = ({ label, value, onChange, options, placeholder }) => (
@@ -37,10 +37,10 @@ const Select = ({ label, value, onChange, options, placeholder }) => (
 );
 
 const initialUsers = [
-  { id: 1, name: 'Aarav Sharma',  email: 'aarav@dbiz.in',  username: 'aarav_s',  roleId: 'role_manager',  channel: 'North', institute: 'IIM Ahmedabad', manager: '',              status: 'Active',   created: '2026-04-10' },
+  { id: 1, name: 'Aarav Sharma',  email: 'aarav@dbiz.in',  username: 'aarav_s',  roleId: 'role_students',  channel: 'North', institute: 'IIM Ahmedabad', manager: 'Sunita Gupta',  status: 'Active',   created: '2026-04-10' },
   { id: 2, name: 'Priya Nair',    email: 'priya@dbiz.in',  username: 'priya_n',  roleId: 'role_students', channel: 'South', institute: 'IIT Madras',    manager: 'Aarav Sharma',  status: 'Active',   created: '2026-04-15' },
-  { id: 3, name: 'Rohit Verma',   email: 'rohit@dbiz.in',  username: 'rohit_v',  roleId: 'role_institute',channel: 'East',  institute: '',              manager: '',              status: 'Inactive', created: '2026-03-22' },
-  { id: 4, name: 'Sunita Gupta',  email: 'sunita@dbiz.in', username: 'sunita_g', roleId: 'role_channel',  channel: '',      institute: '',              manager: '',              status: 'Active',   created: '2026-05-01' },
+  { id: 3, name: 'Rohit Verma',   email: 'rohit@dbiz.in',  username: 'rohit_v',  roleId: 'role_students', channel: 'East',  institute: 'Delhi University', manager: 'Sunita Gupta',  status: 'Inactive', created: '2026-03-22' },
+  { id: 4, name: 'Sunita Gupta',  email: 'sunita@dbiz.in', username: 'sunita_g', roleId: 'role_students',  channel: 'West',      institute: 'BITS Pilani',     manager: 'Aarav Sharma',  status: 'Active',   created: '2026-05-01' },
 ];
 
 const UserManagement = () => {

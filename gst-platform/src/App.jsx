@@ -17,6 +17,8 @@ import UserManagement from './pages/UserManagement';
 import Projects from './pages/Projects';
 import Settings from './pages/Settings';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import AdminDashboard from './pages/AdminDashboard';
+import LearningPage from './pages/LearningPage';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -57,20 +59,11 @@ const SuperAdminRoute = ({ children }) => {
   
   // If logged-in user is not superadmin, redirect them to their correct dashboard
   if (user.role !== 'superadmin') {
-    console.log(`SuperAdminRoute: User role '${user.role}' is not superadmin. Redirecting to correct dashboard.`);
-    
-    let targetDashboard = '/';
+    console.log(`SuperAdminRoute: User role '${user.role}' is not superadmin. Redirecting to appropriate dashboard.`);
     if (user.role === 'admin') {
-      targetDashboard = '/admin/dashboard';
-    } else if (user.role === 'institute') {
-      targetDashboard = '/institute/dashboard';
-    } else if (user.role === 'manager') {
-      targetDashboard = '/manager/dashboard';
-    } else if (user.role === 'student') {
-      targetDashboard = '/student/dashboard';
+      return <Navigate to="/admin/dashboard" replace />;
     }
-    
-    return <Navigate to={targetDashboard} replace />;
+    return <Navigate to="/student/dashboard" replace />;
   }
   
   return children;
@@ -128,6 +121,7 @@ const LearningServiceRoute = ({ children }) => {
   
   const hasLearningService = 
     user.role === 'superadmin' || 
+    user.role === 'admin' || 
     user.permissions?.learning_service === true ||
     user.permissions === undefined;
 
@@ -160,6 +154,13 @@ function App() {
             </SuperAdminRoute>
           } />
 
+          {/* Admin Routes */}
+          <Route path="/admin/dashboard" element={
+            <AdminPanelRoute>
+              <AdminDashboard />
+            </AdminPanelRoute>
+          } />
+
           {/* Protected Routes */}
           <Route path="/" element={
             <ProtectedRoute>
@@ -170,6 +171,7 @@ function App() {
             <Route path="student/dashboard" element={<Dashboard />} />
             <Route path="modules" element={<LearningServiceRoute><Modules /></LearningServiceRoute>} />
             <Route path="modules/:id" element={<LearningServiceRoute><ModuleDetail /></LearningServiceRoute>} />
+            <Route path="learning/:service" element={<LearningServiceRoute><LearningPage /></LearningServiceRoute>} />
             <Route path="compliance" element={<LearningServiceRoute><div className="p-8"><h1 className="text-2xl font-bold">Compliance Updates</h1><p className="text-slate-500 mt-2">Feature coming soon...</p></div></LearningServiceRoute>} />
             <Route path="resources" element={<LearningServiceRoute><div className="p-8"><h1 className="text-2xl font-bold">Resources</h1><p className="text-slate-500 mt-2">Feature coming soon...</p></div></LearningServiceRoute>} />
             <Route path="settings" element={<Settings />} />

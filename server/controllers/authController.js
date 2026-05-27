@@ -56,6 +56,15 @@ exports.login = async (req, res, next) => {
       });
     }
 
+    console.log("USER ROLE:", dbUser.role);
+    if (dbUser.role !== 'superadmin' && dbUser.role !== 'admin' && dbUser.role !== 'student') {
+      console.log('LOGIN BLOCKED: Role not allowed:', dbUser.role);
+      return res.status(401).json({
+        success: false,
+        message: 'Access Denied: Only Student, Admin, and Super Admin logins are permitted.'
+      });
+    }
+
     console.log("USER STATUS:", dbUser.status);
     if (dbUser.status !== 'active') {
       console.log('LOGIN BLOCKED: User account status is inactive:', dbUser.status);

@@ -57,11 +57,7 @@ const Login = () => {
         if (userRole === 'superadmin') {
           redirectPath = '/superadmin/dashboard';
         } else if (userRole === 'admin') {
-          redirectPath = '/admin/dashboard';
-        } else if (userRole === 'institute') {
-          redirectPath = '/institute/dashboard';
-        } else if (userRole === 'manager') {
-          redirectPath = '/manager/dashboard';
+          redirectPath = '/';
         } else if (userRole === 'student') {
           redirectPath = '/student/dashboard';
         }

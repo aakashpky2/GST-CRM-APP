@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   BarChart, 
   Bar, 
@@ -7,7 +8,9 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  Cell
+  Cell,
+  LineChart,
+  Line
 } from 'recharts';
 import { 
   Play, 
@@ -25,17 +28,81 @@ import {
   History,
   PlusCircle,
   X,
-  Wallet
+  Wallet,
+  Users,
+  Briefcase,
+  Layers,
+  ArrowUpRight,
+  TrendingUp,
+  Activity,
+  Flame,
+  Bell,
+  FileText,
+  UserPlus,
+  CheckSquare,
+  FileSpreadsheet
 } from 'lucide-react';
-import { gstModules, weeklyActivity, complianceUpdates } from '../data/mockData';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
+// Beautiful premium mock data for charts and cards
+const learningWeeklyActivity = [
+  { name: 'Mon', hours: 2.4 },
+  { name: 'Tue', hours: 4.1 },
+  { name: 'Wed', hours: 1.8 },
+  { name: 'Thu', hours: 3.5 },
+  { name: 'Fri', hours: 5.0 },
+  { name: 'Sat', hours: 1.2 },
+  { name: 'Sun', hours: 2.8 }
+];
+
+const completionStats = [
+  { name: 'GST', pct: 60 },
+  { name: 'Tax', pct: 40 },
+  { name: 'ROC', pct: 25 },
+  { name: 'Audit', pct: 10 },
+  { name: 'Payroll', pct: 50 },
+  { name: 'Accounting', pct: 30 }
+];
+
+const recentActivities = [
+  { id: 1, type: 'view', desc: 'Viewed topic "GST Registration on MCA V3"', time: '2 hours ago', icon: <BookOpen className="text-blue-500" size={16} /> },
+  { id: 2, type: 'quiz', desc: 'Completed quiz "Presumptive Tax Sec 44AD" - 90%', time: 'Yesterday', icon: <Award className="text-emerald-500" size={16} /> },
+  { id: 3, type: 'download', desc: 'Downloaded template "PF Monthly ECR Calculator"', time: '2 days ago', icon: <Download className="text-purple-500" size={16} /> },
+  { id: 4, type: 'complete', desc: 'Finished Module "Introduction to Direct Taxes"', time: '3 days ago', icon: <CheckCircle2 className="text-cyan-500" size={16} /> }
+];
+
+const complianceNotifications = [
+  { id: 1, title: 'GST GSTR-1 Monthly Return Filing Due', date: 'May 31, 2026', badge: 'GST', status: 'Immediate', color: 'bg-rose-100 text-rose-700 border-rose-200' },
+  { id: 2, title: 'Quarterly TDS Return Filing Form 24Q/26Q', date: 'June 15, 2026', badge: 'Income Tax', status: 'Upcoming', color: 'bg-amber-100 text-amber-700 border-amber-200' },
+  { id: 3, title: 'ROC Form DIR-3 KYC Director Annual Renewal', date: 'June 30, 2026', badge: 'ROC Compliance', status: 'Normal', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+  { id: 4, title: 'Labor Department Half-Yearly Returns Submission', date: 'July 15, 2026', badge: 'Payroll', status: 'Pending', color: 'bg-slate-100 text-slate-700 border-slate-200' }
+];
+
+const serviceLearningCards = [
+  { label: 'GST', key: 'gst', desc: 'Indirect taxation registry, filings, GSTR-1/3B notices.', lessons: '56', progress: 60, color: 'from-blue-600 to-cyan-500', bg: 'bg-blue-50/50' },
+  { label: 'Income Tax', key: 'income-tax', desc: 'ITR calculations, direct taxes, Section 80C deductions.', lessons: '48', progress: 40, color: 'from-emerald-600 to-teal-500', bg: 'bg-emerald-50/50' },
+  { label: 'ROC Compliance', key: 'roc-compliance', desc: 'MCA annual returns, company minutes, secretarial filing.', lessons: '32', progress: 25, color: 'from-purple-600 to-indigo-500', bg: 'bg-purple-50/50' },
+  { label: 'Company Registration', key: 'company-registration', desc: 'Incorporate Pvt Ltd, LLP, Partnership, Startup benefits.', lessons: '24', progress: 15, color: 'from-indigo-600 to-blue-500', bg: 'bg-indigo-50/50' },
+  { label: 'Trademark', key: 'trademark', desc: 'Vienna public search, class cataloging, objections response.', lessons: '18', progress: 0, color: 'from-cyan-600 to-sky-500', bg: 'bg-cyan-50/50' },
+  { label: 'Payroll & HR', key: 'payroll-hr', desc: 'Salary breakups, PF ECR sheets, ESI portals, labour norms.', lessons: '38', progress: 50, color: 'from-pink-600 to-rose-500', bg: 'bg-pink-50/50' },
+  { label: 'Accounting', key: 'accounting', desc: 'Bookkeeping entries, automated trial ledger, balance sheets.', lessons: '44', progress: 30, color: 'from-amber-600 to-orange-500', bg: 'bg-amber-50/50' },
+  { label: 'Audit & Assurance', key: 'audit', desc: 'Statutory audit planning, CARO reports, work checklists.', lessons: '28', progress: 10, color: 'from-rose-600 to-pink-500', bg: 'bg-rose-50/50' }
+];
+
+const crmMetrics = [
+  { label: 'Active Clients', value: '142', sub: '3 new this week', icon: <Users className="text-cyan-600" size={20} /> },
+  { label: 'Pending Works', value: '28', sub: '12 high priority', icon: <Briefcase className="text-indigo-600" size={20} /> },
+  { label: 'Scheduled Follow-ups', value: '45', sub: 'For GST/ITR audits', icon: <History className="text-purple-600" size={20} /> },
+  { label: 'Monthly Revenue', value: '₹4.8L', sub: '+18% growth month-on-month', icon: <TrendingUp className="text-emerald-600" size={20} /> }
+];
+
 const Dashboard = () => {
   const [mounted, setMounted] = useState(false);
   const { user } = useAuth();
+  const navigate = useNavigate();
   
   // Student Credit System States
   const [credits, setCredits] = useState(null);
@@ -99,168 +166,311 @@ const Dashboard = () => {
       setReqLoading(false);
     }
   };
+
+  const handleQuickAction = (action) => {
+    toast.success(`Action Executed: ${action}`);
+  };
+
+  const startLearning = (key) => {
+    navigate(`/learning/${key}`);
+  };
+
   return (
-    <div className="space-y-8 pb-10">
-      {/* Welcome Card */}
+    <div className="space-y-10 pb-12 font-sans bg-[#F8FAFC]">
+      
+      {/* 1. Hero Section */}
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden bg-slate-900 rounded-[2rem] p-8 text-white shadow-2xl shadow-slate-200"
+        className="relative overflow-hidden rounded-[2.5rem] border border-slate-100 bg-white p-8 md:p-10 shadow-sm"
       >
-        <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-cyan-500/20 to-transparent blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-cyan-500/5 to-transparent blur-3xl pointer-events-none" />
         <div className="relative z-10 md:flex items-center justify-between gap-10">
           <div className="space-y-4 max-w-xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-cyan-500/20 rounded-full border border-cyan-500/30">
-              <Zap size={14} className="text-cyan-400" />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-400">Keep it up!</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-cyan-50 rounded-full border border-cyan-100">
+              <Flame size={14} className="text-cyan-600 animate-pulse" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-600">3-Day Study Streak!</span>
             </div>
-            <h1 className="text-4xl font-bold tracking-tight">Ready to master GST?</h1>
-            <p className="text-slate-400 text-lg">You've completed 25% of your certification path. Continue where you left off in GST Registration.</p>
-            <button className="flex items-center gap-2 px-6 py-3 bg-white text-slate-900 rounded-xl font-bold text-sm transition-all hover:bg-cyan-50 active:scale-95">
-              <Play size={18} fill="currentColor" />
-              Continue Learning
-            </button>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+              Welcome back, {user?.username?.split('@')[0] || 'Student'}!
+            </h1>
+            <p className="text-slate-500 text-base md:text-lg leading-relaxed">
+              Accelerate your accounting career and master legal services. You have completed 25% of your professional certification goals.
+            </p>
+            <div className="pt-2 flex flex-wrap gap-3">
+              <button 
+                onClick={() => startLearning('gst')}
+                className="flex items-center gap-2 px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl font-bold text-xs transition-all shadow-lg shadow-cyan-600/10 active:scale-95"
+              >
+                <Play size={16} fill="currentColor" />
+                Continue Learning GST
+              </button>
+              <button 
+                onClick={() => handleQuickAction('Explore Courses')}
+                className="flex items-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition-all active:scale-95"
+              >
+                Explore Services
+              </button>
+            </div>
           </div>
-          <div className="hidden md:flex flex-col items-center gap-2 p-6 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl">
+          
+          <div className="hidden md:flex flex-col items-center gap-2 p-6 bg-slate-50 border border-slate-100 rounded-[2rem] w-48 shrink-0">
             <div className="relative w-24 h-24 flex items-center justify-center">
               <svg className="w-full h-full -rotate-90">
-                <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-white/10" />
-                <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray="251.2" strokeDashoffset="188.4" className="text-cyan-400" />
+                <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-250" />
+                <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray="251.2" strokeDashoffset="188.4" className="text-cyan-600" />
               </svg>
-              <Award className="absolute text-cyan-400" size={32} />
+              <Award className="absolute text-cyan-600" size={32} />
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold">25%</p>
-              <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Progress</p>
+              <p className="text-2xl font-black text-slate-900">25%</p>
+              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Total Goals Met</p>
             </div>
           </div>
         </div>
       </motion.div>
 
-      {/* Grid Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[
-          { label: 'Completed Lessons', val: '14', sub: 'Out of 56 total', icon: <CheckCircle2 className="text-emerald-500" /> },
-          { label: 'Learning Time', val: '12.4h', sub: 'Last 7 days', icon: <Clock className="text-cyan-500" /> },
-          { label: 'Active Modules', val: '02', sub: 'In progress', icon: <BookOpen className="text-blue-500" /> },
-          { label: 'Upcoming Due Dates', val: '03', sub: 'GST Compliance', icon: <Calendar className="text-orange-500" /> },
-        ].map((stat, i) => (
-          <motion.div 
-            key={i}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
-                {stat.icon}
+      {/* 2. Service Learning Cards Section */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-2xl font-black text-slate-900">SaaS Learning & Compliance Services</h2>
+          <p className="text-slate-500 text-sm mt-0.5">Explore beginner-to-advanced curriculums on corporate governance and tax filing.</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {serviceLearningCards.map((service, i) => (
+            <motion.div 
+              key={service.key}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className="bg-white border border-slate-100 rounded-[2rem] p-6 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group"
+            >
+              <div className="space-y-4">
+                <div className="flex justify-between items-start">
+                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${service.color} flex items-center justify-center shadow-md`}>
+                    <BookOpen className="text-white" size={22} />
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded">
+                    {service.lessons} Lessons
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-extrabold text-slate-950 group-hover:text-cyan-600 transition-colors text-base">
+                    {service.label}
+                  </h3>
+                  <p className="text-xs text-slate-450 leading-relaxed min-h-[36px]">
+                    {service.desc}
+                  </p>
+                </div>
               </div>
-              <ChevronRight size={16} className="text-slate-300" />
-            </div>
-            <p className="text-3xl font-bold text-slate-900">{stat.val}</p>
-            <p className="text-sm font-semibold text-slate-900 mt-1">{stat.label}</p>
-            <p className="text-xs text-slate-500 mt-0.5">{stat.sub}</p>
-          </motion.div>
-        ))}
+
+              <div className="space-y-4 mt-6 pt-4 border-t border-slate-100">
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center text-[10px] font-bold text-slate-400">
+                    <span>Progress</span>
+                    <span>{service.progress}%</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className={`h-full bg-gradient-to-r ${service.color}`} style={{ width: `${service.progress}%` }} />
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => startLearning(service.key)}
+                  className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-slate-50 hover:bg-cyan-50 hover:text-cyan-600 text-slate-700 rounded-xl font-bold text-xs transition-all active:scale-[0.98]"
+                >
+                  Start Learning
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </motion.div>
+          ))}
+        </div>
       </div>
 
+      {/* 3. Learning Progress and Metrics Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Activity Chart */}
+        
+        {/* Left 2 Cols: Recharts Weekly Activity and Completion Stats */}
         <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
+          initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="lg:col-span-2 bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm"
+          className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-8"
         >
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-slate-900">Learning Activity</h2>
-              <p className="text-sm text-slate-500">Your study hours per day</p>
+              <h2 className="text-xl font-bold text-slate-950">Analytics & Activity</h2>
+              <p className="text-xs text-slate-500">Your visual study progress across legal platforms</p>
             </div>
-            <select className="bg-slate-50 border-none rounded-xl px-4 py-2 text-sm font-bold text-slate-700 outline-none cursor-pointer">
-              <option>This Week</option>
-              <option>Last Week</option>
-            </select>
+            <div className="flex gap-2">
+              <span className="text-[10px] font-bold px-3 py-1 bg-cyan-50 text-cyan-600 rounded-full border border-cyan-100 flex items-center gap-1">
+                <Clock size={12} /> Live Tracking
+              </span>
+            </div>
           </div>
-          <div className="h-[300px] w-full">
-            {mounted && (
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                <BarChart data={weeklyActivity}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                  <XAxis 
-                    dataKey="name" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: '#94A3B8', fontSize: 12, fontWeight: 600 }}
-                    dy={10}
-                  />
-                  <YAxis 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: '#94A3B8', fontSize: 12, fontWeight: 600 }}
-                  />
-                  <Tooltip 
-                    cursor={{ fill: '#F8FAFC' }}
-                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                  />
-                  <Bar dataKey="hours" radius={[6, 6, 0, 0]} barSize={40}>
-                    {weeklyActivity.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.hours > 3 ? '#0EA5E9' : '#E2E8F0'} className="transition-all hover:fill-cyan-500" />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* Weekly Activity Bar Chart */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-center text-xs font-bold text-slate-600">
+                <span>Study Hours / Day</span>
+                <span className="text-cyan-600">Avg: 3.2h</span>
+              </div>
+              <div className="h-[200px] w-full">
+                {mounted && (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={learningWeeklyActivity}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 10, fontWeight: 600 }} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 10, fontWeight: 600 }} />
+                      <Tooltip cursor={{ fill: '#F8FAFC' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }} />
+                      <Bar dataKey="hours" radius={[4, 4, 0, 0]} barSize={24}>
+                        {learningWeeklyActivity.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.hours > 3 ? '#0EA5E9' : '#E2E8F0'} className="transition-all hover:fill-cyan-500" />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
+
+            {/* Course Completion Line Chart */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-center text-xs font-bold text-slate-600">
+                <span>Completion Status / Service</span>
+                <span className="text-purple-600">Avg: 36%</span>
+              </div>
+              <div className="h-[200px] w-full">
+                {mounted && (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={completionStats}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 9, fontWeight: 600 }} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 10, fontWeight: 600 }} />
+                      <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }} />
+                      <Line type="monotone" dataKey="pct" stroke="#8B5CF6" strokeWidth={3} activeDot={{ r: 6 }} dot={{ fill: '#8B5CF6', r: 3 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
           </div>
         </motion.div>
 
-        {/* Quick Actions & Compliance */}
-        <div className="space-y-8">
-          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-            <h2 className="text-xl font-bold text-slate-900 mb-6">Quick Actions</h2>
+        {/* Right 1 Col: Quick Action Grid */}
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-slate-950 mb-1">Interactive Console</h2>
+            <p className="text-xs text-slate-500 mb-6">Quick actions to execute compliance work and tasking</p>
             <div className="grid grid-cols-2 gap-4">
               {[
-                { icon: <Calculator size={18} />, label: 'GST Calc', color: 'bg-blue-50 text-blue-600' },
-                { icon: <Download size={18} />, label: 'Templates', color: 'bg-emerald-50 text-emerald-600' },
-                { icon: <Calendar size={18} />, label: 'Due Dates', color: 'bg-orange-50 text-orange-600' },
-                { icon: <ListChecks size={18} />, label: 'Checklist', color: 'bg-purple-50 text-purple-600' },
+                { icon: <Calculator size={18} />, label: 'GST Calculator', action: 'GST Calculator' },
+                { icon: <Download size={18} />, label: 'Form Templates', action: 'Download Templates' },
+                { icon: <Calendar size={18} />, label: 'ROC Due Dates', action: 'View Due Dates' },
+                { icon: <ListChecks size={18} />, label: 'Filing Checklist', action: 'Compliance Checklist' },
+                { icon: <UserPlus size={18} />, label: 'Add Client', action: 'Add CRM Client' },
+                { icon: <CheckSquare size={18} />, label: 'Create Task', action: 'Create CRM Task' },
               ].map((action, i) => (
-                <button key={i} className="flex flex-col items-center justify-center p-4 rounded-2xl border border-slate-50 transition-all hover:bg-slate-50 hover:shadow-sm active:scale-95 group">
-                  <div className={`w-12 h-12 ${action.color} rounded-xl flex items-center justify-center mb-2 transition-all group-hover:scale-110`}>
+                <button 
+                  key={i} 
+                  onClick={() => handleQuickAction(action.action)}
+                  className="flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-50 hover:bg-cyan-50 hover:text-cyan-600 border border-transparent transition-all hover:shadow-sm active:scale-95 group"
+                >
+                  <div className="w-10 h-10 bg-white border border-slate-100 text-slate-500 rounded-xl flex items-center justify-center mb-2 transition-all group-hover:scale-110 group-hover:border-cyan-200">
                     {action.icon}
                   </div>
-                  <span className="text-xs font-bold text-slate-700">{action.label}</span>
+                  <span className="text-[10px] font-bold text-slate-700 text-center tracking-wide">{action.label}</span>
                 </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-            <h2 className="text-xl font-bold text-slate-900 mb-6">Compliance Watch</h2>
-            <div className="space-y-4">
-              {complianceUpdates.map((update) => (
-                <div key={update.id} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                  <div className={`w-2 h-10 rounded-full ${update.status === 'Passed' ? 'bg-emerald-500' : 'bg-orange-400'}`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-900 truncate">{update.title}</p>
-                    <p className="text-xs text-slate-500 font-semibold">{update.date}</p>
-                  </div>
-                  <span className={`text-[10px] px-2 py-1 rounded-lg font-bold ${
-                    update.status === 'Passed' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'
-                  }`}>
-                    {update.status}
-                  </span>
-                </div>
               ))}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Student Credit Wallet System */}
+      {/* 4 & 5. Recent Activity and Compliance Updates */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        {/* Recent Learning Activity */}
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold text-slate-950">Recent Activity Log</h2>
+            <span className="text-xs font-semibold text-slate-400">History</span>
+          </div>
+          <div className="space-y-4">
+            {recentActivities.map((act) => (
+              <div key={act.id} className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <div className="w-8 h-8 rounded-xl bg-white border border-slate-150 flex items-center justify-center shrink-0">
+                  {act.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-slate-800 leading-tight">{act.desc}</p>
+                  <p className="text-[10px] text-slate-400 mt-1 font-semibold">{act.time}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Compliance Updates Notification Card */}
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold text-slate-950">Compliance & Regulatory Circulars</h2>
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
+          </div>
+          <div className="space-y-4">
+            {complianceNotifications.map((notif) => (
+              <div key={notif.id} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[8px] font-extrabold uppercase px-2 py-0.5 rounded bg-cyan-50 text-cyan-600 border border-cyan-150">
+                      {notif.badge}
+                    </span>
+                    <span className="text-[9px] text-slate-400 font-semibold">{notif.date}</span>
+                  </div>
+                  <p className="text-xs font-bold text-slate-800 truncate" title={notif.title}>{notif.title}</p>
+                </div>
+                <span className={`text-[9px] px-2 py-1 rounded-lg font-bold border shrink-0 ${notif.color}`}>
+                  {notif.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 6. CRM Analytics Overview */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-2xl font-black text-slate-900">CRM Operations</h2>
+          <p className="text-slate-500 text-sm mt-0.5">Manage live clients and audit operations securely.</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {crmMetrics.map((metric, i) => (
+            <motion.div 
+              key={i}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className="bg-white border border-slate-100 rounded-[2rem] p-6 shadow-sm flex items-start gap-4 hover:shadow-md transition-all duration-300"
+            >
+              <div className="w-10 h-10 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center shrink-0">
+                {metric.icon}
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider leading-none">{metric.label}</p>
+                <p className="text-3xl font-extrabold text-slate-950 mt-1">{metric.value}</p>
+                <p className="text-[10px] text-slate-550 font-medium leading-none">{metric.sub}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* 7. Student Credit Wallet System (Maintaining Complete Compatibility) */}
       {user?.role === 'student' && (
         <div className="space-y-6 mt-8">
-          <div className="flex sm:flex-row flex-col sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div className="flex sm:flex-row flex-col sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
             <div>
               <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2">
                 <Coins className="text-cyan-500 animate-bounce" size={26} />

@@ -162,11 +162,7 @@ const DashboardLayout = () => {
             )}
             {crmMenus.map((item) => {
               // Hide Admin Panel completely if user does not have permission
-              const hasAdminPanel = 
-                user?.role === 'superadmin' || 
-                user?.role === 'admin' || 
-                user?.permissions?.admin_panel === true ||
-                (user && user.permissions === undefined); // Fallback for active legacy sessions
+              const hasAdminPanel = user?.role === 'superadmin' || user?.role === 'admin';
 
               if (item.label === 'Admin Panel' && !hasAdminPanel) {
                 return null;
@@ -234,9 +230,7 @@ const DashboardLayout = () => {
           </div>
 
           {/* Learning Services Section */}
-          {(user?.role === 'superadmin' || 
-            user?.permissions?.learning_service === true ||
-            (user && user.permissions === undefined)) && (
+          {(user?.role === 'superadmin' || user?.role === 'admin' || user?.role === 'student') && (
             <div className="space-y-1.5">
               {isSidebarOpen && (
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">Learning Services</p>
@@ -281,7 +275,7 @@ const DashboardLayout = () => {
                             return (
                               <Link
                                 key={sub}
-                                to="#"
+                                to={`/learning/${section.label.toLowerCase().replace(/ & /g, '-').replace(/\s+/g, '-')}`}
                                 className="block py-1.5 text-sm text-slate-500 hover:text-cyan-600 transition-colors"
                               >
                                 {sub}
