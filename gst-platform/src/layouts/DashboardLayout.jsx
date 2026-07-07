@@ -264,8 +264,6 @@ const DashboardLayout = () => {
                                 <a
                                   key={sub}
                                   href="https://gst-app-gamma.vercel.app/"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
                                   className="block py-1.5 text-sm text-slate-500 hover:text-cyan-600 transition-colors"
                                 >
                                   {sub}
