@@ -22,19 +22,30 @@ app.use((req, res, next) => {
 app.use(helmet());
 const allowedOrigins = [
   'http://localhost:5173',
+  'http://localhost:5174',
   'http://localhost:5175',
   'https://gst-crm-app.vercel.app',
+  'https://gst-app-gamma.vercel.app',
   process.env.CLIENT_URL
 ].filter(Boolean);
 
 app.use(cors({
-  origin: allowedOrigins,
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+    return callback(new Error('CORS blocked origin'), false);
+  },
   credentials: true
 }));
 app.use(morgan('dev'));
 app.use(express.json());
 
 // Routes
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date(), service: 'crm-app-backend' });
+});
 app.use('/api/auth', authRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/superadmin', superadminRoutes);
