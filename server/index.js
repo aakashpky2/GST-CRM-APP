@@ -8,6 +8,7 @@ const authRoutes = require('./routes/auth');
 const itemRoutes = require('./routes/items');
 const superadminRoutes = require('./routes/superadmin');
 const creditsRoutes = require('./routes/credits');
+const sessionRoutes = require('./routes/sessions');
 const errorHandler = require('./middleware/error');
 
 const app = express();
@@ -37,6 +38,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/superadmin', superadminRoutes);
+app.use('/api/session', sessionRoutes);
 app.use('/api', creditsRoutes);
 
 // Health check

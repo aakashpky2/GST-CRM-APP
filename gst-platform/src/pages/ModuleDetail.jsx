@@ -14,13 +14,16 @@ import {
 } from 'lucide-react';
 import { gstModules } from '../data/mockData';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLearningSession } from '../hooks/useLearningSession';
 
 const ModuleDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Overview');
+  const [actionLoading, setActionLoading] = useState(false);
   
   const module = gstModules.find(m => m.id === parseInt(id)) || gstModules[0];
+  const { isActive, activeDuration, creditsBurned } = useLearningSession(module.title);
 
   const tabs = ['Overview', 'Lessons', 'Videos', 'Forms', 'Templates', 'FAQs', 'Updates'];
 
@@ -31,8 +34,46 @@ const ModuleDetail = () => {
     { id: 4, title: 'Step-by-Step Registration Guide', duration: '25:00', completed: false },
   ];
 
+  const handlePremiumAction = async (actionKey, actionName) => {
+    try {
+      setActionLoading(true);
+      const token = localStorage.getItem('token');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      
+      const res = await axios.post(`${API_URL}/session/premium-action`, 
+        { actionKey, moduleName: module.title },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (res.data.success) {
+        toast.success(`${actionName} Successful! ${res.data.cost} Credits Deducted.`);
+      }
+    } catch (err) {
+      if (err.response?.status === 402) {
+        toast.error('Insufficient Credits for this premium action.');
+      } else {
+        toast.error('Failed to perform premium action.');
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-8 pb-10 relative">
+      
+      {/* Floating Session Widget */}
+      <div className={`fixed bottom-6 right-6 z-50 p-4 rounded-2xl shadow-xl border flex flex-col items-center gap-1 transition-all ${isActive ? 'bg-cyan-50 border-cyan-200' : 'bg-slate-100 border-slate-300 opacity-70'}`}>
+        <div className="flex items-center gap-2">
+           <div className={`w-3 h-3 rounded-full ${isActive ? 'bg-cyan-500 animate-pulse' : 'bg-slate-400'}`}></div>
+           <span className="text-xs font-bold text-slate-700 uppercase tracking-widest">{isActive ? 'Session Active' : 'Session Paused'}</span>
+        </div>
+        <div className="text-xl font-black text-slate-900">
+           {Math.floor(activeDuration / 60)}:{(activeDuration % 60).toString().padStart(2, '0')}
+        </div>
+        {creditsBurned > 0 && <div className="text-[10px] font-bold text-rose-500 uppercase tracking-widest mt-1">-{creditsBurned} Credits Burned</div>}
+      </div>
+
       <button 
         onClick={() => navigate('/modules')}
         className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold text-sm transition-all group"
@@ -128,7 +169,11 @@ const ModuleDetail = () => {
                         </div>
                       </div>
                     </div>
-                    <button className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-900 hover:border-slate-300 transition-all">
+                    <button 
+                      onClick={() => handlePremiumAction('generate_pdf', 'Download PDF')}
+                      disabled={actionLoading}
+                      className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-900 hover:border-slate-300 transition-all disabled:opacity-50"
+                    >
                       <Download size={18} />
                     </button>
                   </div>

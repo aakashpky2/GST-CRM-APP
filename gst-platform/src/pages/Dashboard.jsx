@@ -46,6 +46,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import CreditWalletCard from '../components/CreditWalletCard';
 
 // Beautiful premium mock data for charts and cards
 const learningWeeklyActivity = [
@@ -229,6 +230,12 @@ const Dashboard = () => {
           </div>
         </div>
       </motion.div>
+
+      {user?.role === 'student' && (
+        <div className="mb-4">
+          <CreditWalletCard />
+        </div>
+      )}
 
       {/* 2. Service Learning Cards Section */}
       <div className="space-y-4">
