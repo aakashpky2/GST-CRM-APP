@@ -148,13 +148,41 @@ exports.getStudentTransactions = async (req, res, next) => {
 
     if (error) throw error;
 
-    res.status(200).json({
-      success: true,
-      transactions
-    });
+    res.status(200).json({ success: true, transactions: transactions });
   } catch (err) {
-    console.error('Error getting student transactions:', err.message);
-    res.status(500).json({ success: false, message: 'Server error retrieving transactions' });
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+// @desc    Get Credit Configurations
+// @route   GET /api/superadmin/credit-config
+// @access  Private/SuperAdmin
+exports.getCreditConfig = async (req, res) => {
+  try {
+    const { data, error } = await supabase.supabaseAdmin.from('credit_configuration').select('*').order('action_key');
+    if (error) throw error;
+    res.status(200).json({ success: true, config: data });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+// @desc    Update Credit Configuration
+// @route   PUT /api/superadmin/credit-config/:key
+// @access  Private/SuperAdmin
+exports.updateCreditConfig = async (req, res) => {
+  try {
+    const { key } = req.params;
+    const { credit_cost } = req.body;
+    const { data, error } = await supabase.supabaseAdmin
+      .from('credit_configuration')
+      .update({ credit_cost })
+      .eq('action_key', key)
+      .select();
+    if (error) throw error;
+    res.status(200).json({ success: true, config: data[0] });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
 

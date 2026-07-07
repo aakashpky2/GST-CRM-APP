@@ -40,6 +40,8 @@ const SuperAdminDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [searchQuery, setSearchQuery] = useState('');
+  const [creditConfigs, setCreditConfigs] = useState([]);
+  const [editingConfig, setEditingConfig] = useState(null);
 
   // Super Admin Credits System States
   const [creditRequests, setCreditRequests] = useState([]);
@@ -77,7 +79,7 @@ const SuperAdminDashboard = () => {
         }));
       }
       
-      const txRes = await axios.get(`${API_BASE}/superadmin/credit-transactions`);
+      const txRes = await axios.get(`${API_BASE}/superadmin/credit-transactions`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
       if (txRes.data.success) {
         setCreditTransactions(txRes.data.transactions);
         
@@ -96,6 +98,11 @@ const SuperAdminDashboard = () => {
           totalAssigned,
           totalUsed
         }));
+      }
+
+      const confRes = await axios.get(`${API_BASE}/superadmin/credit-config`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      if (confRes.data.success) {
+        setCreditConfigs(confRes.data.config);
       }
     } catch (err) {
       console.error('Error fetching admin credits data:', err);
@@ -129,6 +136,19 @@ const SuperAdminDashboard = () => {
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to reject request');
+    }
+  };
+
+  const handleUpdateConfig = async (key, cost) => {
+    try {
+      const res = await axios.put(`${API_BASE}/superadmin/credit-config/${key}`, { credit_cost: cost }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+      if (res.data.success) {
+        toast.success('Configuration updated');
+        setEditingConfig(null);
+        fetchCreditsAdminData();
+      }
+    } catch (err) {
+      toast.error('Failed to update config');
     }
   };
 
@@ -203,7 +223,7 @@ const SuperAdminDashboard = () => {
           </div>
 
           {/* Navigation Links */}
-          <nav className="p-4 space-y-1.5">
+          <nav className="p-4 space-y-1.5 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 100px)' }}>
             {menuItems.map((item) => {
               const isActive = activeTab === item.name;
               return (
@@ -247,7 +267,6 @@ const SuperAdminDashboard = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 relative">
-        {/* Ambient background glow inside content area */}
         <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-indigo-600/5 blur-[120px] pointer-events-none" />
 
         {/* Top Navbar */}
@@ -259,7 +278,6 @@ const SuperAdminDashboard = () => {
           </div>
 
           <div className="flex items-center gap-6">
-            {/* Search Input */}
             <div className="relative w-64 hidden sm:block">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                 <Search size={16} />
@@ -272,28 +290,18 @@ const SuperAdminDashboard = () => {
                 className="w-full h-10 pl-9 pr-4 rounded-xl text-xs text-white placeholder:text-slate-600 bg-white/[0.02] border border-slate-800 outline-none focus:border-indigo-500/50 transition-colors"
               />
             </div>
-
-            {/* Notification Bell */}
             <button className="relative w-10 h-10 rounded-xl bg-white/[0.02] border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors">
               <Bell size={18} />
               <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-indigo-500" />
             </button>
-
-            {/* Profile Dropdown */}
             <div className="flex items-center gap-3 pl-4 border-l border-slate-800">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white text-sm shadow-md shadow-indigo-500/10">
                 SA
               </div>
-              <div className="hidden md:block">
-                <span className="block text-xs font-bold text-white leading-none">Super Admin</span>
-                <span className="text-[9px] font-bold text-emerald-400 tracking-wider uppercase block mt-1">Active</span>
-              </div>
-              <ChevronDown size={14} className="text-slate-500 hidden md:block" />
             </div>
           </div>
         </header>
 
-        {/* Dashboard Dashboard Views */}
         <main className="flex-1 overflow-y-auto p-8 relative">
           <AnimatePresence mode="wait">
             <motion.div
@@ -308,7 +316,6 @@ const SuperAdminDashboard = () => {
               {/* RENDER VIEW: DASHBOARD */}
               {activeTab === 'Dashboard' && (
                 <>
-                  {/* Welcome Message Card */}
                   <div className="relative overflow-hidden rounded-[2rem] border border-slate-800/80 bg-gradient-to-br from-[#101730] to-[#0A0D1B] p-8 md:p-10 shadow-2xl">
                     <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-indigo-500/10 to-transparent blur-3xl pointer-events-none" />
                     <div className="relative z-10 space-y-4 max-w-2xl">
@@ -319,309 +326,14 @@ const SuperAdminDashboard = () => {
                       <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
                         Welcome Super Admin
                       </h1>
-                      <p className="text-slate-400 text-base md:text-lg leading-relaxed">
-                        Manage corporate channels, educational institutes, regional managers, and track live student enrolments across your custom ecosystem database.
-                      </p>
-                      <div className="pt-2 flex flex-wrap gap-3">
-                        <button className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs transition-colors shadow-lg shadow-indigo-600/25">
-                          <Plus size={16} />
-                          Register Channel
-                        </button>
-                        <button className="flex items-center gap-2 px-5 py-2.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-white rounded-xl font-bold text-xs transition-colors">
-                          <FileText size={16} className="text-slate-400" />
-                          View Operations Log
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Dashboard Statistics Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {stats.map((stat, idx) => (
-                      <div 
-                        key={idx}
-                        className="bg-[#0A0F20] border border-slate-800/80 rounded-[1.5rem] p-6 shadow-xl hover:border-slate-700 transition-all duration-300 group"
-                      >
-                        <div className="flex justify-between items-center mb-6">
-                          <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${stat.color} flex items-center justify-center shadow-lg`}>
-                            {stat.icon}
-                          </div>
-                          <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 rounded-full flex items-center gap-1">
-                            <TrendingUp size={12} />
-                            {stat.change}
-                          </span>
-                        </div>
-                        <p className="text-4xl font-extrabold text-white tracking-tight">{stat.value}</p>
-                        <p className="text-sm font-semibold text-slate-300 mt-2">{stat.label}</p>
-                        <p className="text-xs text-slate-500 mt-1">Refreshed live just now</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Credit Management System Overview */}
-                  <div className="space-y-4">
-                    <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                      <Coins className="text-indigo-400" size={20} />
-                      Student Credits Management Overview
-                    </h2>
-                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-6">
-                      <div className="bg-[#0A0F20] border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden">
-                        <p className="text-[10px] uppercase font-bold text-indigo-400 tracking-wider">Total Assigned</p>
-                        <p className="text-3xl font-extrabold text-white mt-2">{creditsStats.totalAssigned}</p>
-                        <p className="text-[10px] text-slate-500 mt-1">Assigned to students</p>
-                      </div>
-                      <div className="bg-[#0A0F20] border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden">
-                        <p className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">Total Used</p>
-                        <p className="text-3xl font-extrabold text-white mt-2">{creditsStats.totalUsed}</p>
-                        <p className="text-[10px] text-slate-500 mt-1">Burned by students</p>
-                      </div>
-                      <div className="bg-[#0A0F20] border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden">
-                        <p className="text-[10px] uppercase font-bold text-amber-400 tracking-wider">Pending Requests</p>
-                        <p className="text-3xl font-extrabold text-white mt-2">{creditsStats.pendingCount}</p>
-                        <p className="text-[10px] text-slate-500 mt-1">Awaiting approval</p>
-                      </div>
-                      <div className="bg-[#0A0F20] border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden">
-                        <p className="text-[10px] uppercase font-bold text-blue-400 tracking-wider">Approved Requests</p>
-                        <p className="text-3xl font-extrabold text-white mt-2">{creditsStats.approvedCount}</p>
-                        <p className="text-[10px] text-slate-500 mt-1">Granted assignments</p>
-                      </div>
-                      <div className="bg-[#0A0F20] border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden col-span-2 lg:col-span-1">
-                        <p className="text-[10px] uppercase font-bold text-rose-400 tracking-wider">Rejected Requests</p>
-                        <p className="text-3xl font-extrabold text-white mt-2">{creditsStats.rejectedCount}</p>
-                        <p className="text-[10px] text-slate-500 mt-1">Denied requests</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Secondary Information Layout */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Recent Systems logs */}
-                    <div className="bg-[#0A0F20] border border-slate-800/80 rounded-[2rem] p-8 shadow-xl">
-                      <h2 className="text-xl font-bold text-white mb-6">System Health & Services</h2>
-                      <div className="space-y-4">
-                        {[
-                          { service: 'Authentication API', time: '1.2ms', status: 'Optimal', indicator: 'bg-emerald-500' },
-                          { service: 'Supabase DB Subscription', time: '8.4ms', status: 'Optimal', indicator: 'bg-emerald-500' },
-                          { service: 'JWT Signer Service', time: '0.4ms', status: 'Optimal', indicator: 'bg-emerald-500' },
-                          { service: 'External Mailing Gateway', time: '142ms', status: 'Warning', indicator: 'bg-amber-500' },
-                        ].map((srv, i) => (
-                          <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-slate-900/40 border border-slate-800/60">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-2.5 h-2.5 rounded-full ${srv.indicator}`} />
-                              <span className="text-sm font-bold text-white">{srv.service}</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-xs text-slate-500">Latency: {srv.time}</span>
-                              <span className="text-[10px] px-2 py-0.5 rounded bg-white/[0.04] text-slate-300 font-semibold">{srv.status}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Quick Access Card */}
-                    <div className="bg-[#0A0F20] border border-slate-800/80 rounded-[2rem] p-8 shadow-xl">
-                      <h2 className="text-xl font-bold text-white mb-6">Regional Metrics</h2>
-                      <div className="space-y-5">
-                        {[
-                          { region: 'North Zone', count: '4,820 Students', percent: '32.5%', fill: 'w-[32.5%]', color: 'bg-blue-500' },
-                          { region: 'South Zone', count: '3,890 Students', percent: '26.2%', fill: 'w-[26.2%]', color: 'bg-indigo-500' },
-                          { region: 'West Zone', count: '3,540 Students', percent: '23.9%', fill: 'w-[23.9%]', color: 'bg-purple-500' },
-                          { region: 'East Zone', count: '2,570 Students', percent: '17.4%', fill: 'w-[17.4%]', color: 'bg-rose-500' },
-                        ].map((reg, i) => (
-                          <div key={i} className="space-y-2">
-                            <div className="flex items-center justify-between text-xs font-semibold">
-                              <span className="text-slate-300">{reg.region}</span>
-                              <span className="text-slate-400">{reg.count} ({reg.percent})</span>
-                            </div>
-                            <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
-                              <div className={`h-full ${reg.color} ${reg.fill} rounded-full`} />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
                     </div>
                   </div>
                 </>
               )}
 
-              {/* RENDER VIEW: CHANNELS */}
-              {activeTab === 'Channels' && (
-                <div className="bg-[#0A0F20] border border-slate-800/80 rounded-[2rem] p-8 shadow-xl">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                    <div>
-                      <h2 className="text-2xl font-bold text-white">Channels Ecosystem</h2>
-                      <p className="text-sm text-slate-500 mt-1">Enterprise client channels associated with learning academies</p>
-                    </div>
-                    <button className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs transition-colors">
-                      <Plus size={16} />
-                      Register New Channel
-                    </button>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-slate-800 text-slate-400 text-xs font-bold uppercase tracking-wider">
-                          <th className="py-4 px-4">Channel Name</th>
-                          <th className="py-4 px-4">Code</th>
-                          <th className="py-4 px-4">Affiliated Institute</th>
-                          <th className="py-4 px-4">Students Enrolled</th>
-                          <th className="py-4 px-4">Status</th>
-                          <th className="py-4 px-4 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60 text-sm">
-                        {channels.map((chan) => (
-                          <tr key={chan.id} className="hover:bg-white/[0.01] transition-colors">
-                            <td className="py-4 px-4 font-bold text-white">{chan.name}</td>
-                            <td className="py-4 px-4 text-indigo-400 font-mono text-xs">{chan.code}</td>
-                            <td className="py-4 px-4 text-slate-300">{chan.institute}</td>
-                            <td className="py-4 px-4 font-semibold text-slate-200">{chan.students.toLocaleString()}</td>
-                            <td className="py-4 px-4">
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider
-                                ${chan.status === 'active' 
-                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                                  : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
-                                }`}>
-                                {chan.status}
-                              </span>
-                            </td>
-                            <td className="py-4 px-4 text-right">
-                              <div className="inline-flex gap-2">
-                                <button className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors">
-                                  <Edit2 size={14} />
-                                </button>
-                                <button className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-rose-400 hover:bg-rose-500/10 transition-colors">
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* RENDER VIEW: INSTITUTES */}
-              {activeTab === 'Institutes' && (
-                <div className="bg-[#0A0F20] border border-slate-800/80 rounded-[2rem] p-8 shadow-xl">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                    <div>
-                      <h2 className="text-2xl font-bold text-white">Affiliated Institutes</h2>
-                      <p className="text-sm text-slate-500 mt-1">Colleges and educational networks participating in learning programs</p>
-                    </div>
-                    <button className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs transition-colors">
-                      <Plus size={16} />
-                      Add Institute
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {institutes.map((inst) => (
-                      <div key={inst.id} className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 shadow-md flex justify-between items-start">
-                        <div className="space-y-3">
-                          <h3 className="text-lg font-bold text-white leading-tight">{inst.name}</h3>
-                          <div className="flex items-center gap-2 text-xs text-slate-400">
-                            <MapPin size={14} />
-                            <span>{inst.city}</span>
-                            <span>&bull;</span>
-                            <span>{inst.courses} Core Modules</span>
-                          </div>
-                          <p className="text-xs text-slate-500">Director: {inst.head}</p>
-                        </div>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider
-                          ${inst.status === 'active' 
-                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' 
-                            : 'bg-slate-500/15 text-slate-400 border border-slate-500/20'
-                          }`}>
-                          {inst.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* RENDER VIEW: MANAGERS */}
-              {activeTab === 'Managers' && (
-                <div className="bg-[#0A0F20] border border-slate-800/80 rounded-[2rem] p-8 shadow-xl">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                    <div>
-                      <h2 className="text-2xl font-bold text-white">System Managers</h2>
-                      <p className="text-sm text-slate-500 mt-1">Assigned representatives managing corporate channels</p>
-                    </div>
-                    <button className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-xs transition-colors">
-                      <Plus size={16} />
-                      Assign Manager
-                    </button>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-slate-800 text-slate-400 text-xs font-bold uppercase tracking-wider">
-                          <th className="py-4 px-4">Manager Info</th>
-                          <th className="py-4 px-4">Assigned Channel</th>
-                          <th className="py-4 px-4">Jurisdiction Region</th>
-                          <th className="py-4 px-4">Status</th>
-                          <th className="py-4 px-4 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60 text-sm">
-                        {managers.map((mgr) => (
-                          <tr key={mgr.id} className="hover:bg-white/[0.01] transition-colors">
-                            <td className="py-4 px-4">
-                              <div className="font-bold text-white">{mgr.name}</div>
-                              <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                                <Mail size={12} />
-                                {mgr.email}
-                              </div>
-                            </td>
-                            <td className="py-4 px-4 text-slate-300 font-semibold">{mgr.channel}</td>
-                            <td className="py-4 px-4 text-indigo-300 font-medium">{mgr.region} Zone</td>
-                            <td className="py-4 px-4">
-                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider
-                                ${mgr.status === 'active' 
-                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                                  : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
-                                }`}>
-                                {mgr.status}
-                              </span>
-                            </td>
-                            <td className="py-4 px-4 text-right">
-                              <div className="inline-flex gap-2">
-                                <button className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors">
-                                  <Edit2 size={14} />
-                                </button>
-                                <button className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-rose-400 hover:bg-rose-500/10 transition-colors">
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
               {/* RENDER VIEW: CREDIT REQUESTS */}
               {activeTab === 'Credit Requests' && (
                 <div className="bg-[#0A0F20] border border-slate-800/80 rounded-[2rem] p-8 shadow-xl">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                    <div>
-                      <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                        <Coins className="text-indigo-400" size={24} />
-                        Credit Request Pipeline
-                      </h2>
-                      <p className="text-sm text-slate-500 mt-1">Review and approve or reject student learning credit requests</p>
-                    </div>
-                  </div>
-
                   {creditRequests.length === 0 ? (
                     <div className="py-20 text-center text-slate-500 text-sm">
                       No credit requests submitted by students yet.
@@ -632,58 +344,20 @@ const SuperAdminDashboard = () => {
                         <thead>
                           <tr className="border-b border-slate-800 text-slate-400 text-xs font-bold uppercase tracking-wider">
                             <th className="py-4 px-4">Student Info</th>
-                            <th className="py-4 px-4">Current Credits</th>
                             <th className="py-4 px-4">Requested Credits</th>
-                            <th className="py-4 px-4">Reason / Message</th>
-                            <th className="py-4 px-4">Requested Date</th>
                             <th className="py-4 px-4">Status</th>
                             <th className="py-4 px-4 text-right">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/60 text-sm">
                           {creditRequests.map((reqItem) => (
-                            <tr key={reqItem.id} className="hover:bg-white/[0.01] transition-colors">
-                              <td className="py-4 px-4">
-                                <div className="font-bold text-white">{reqItem.student_name}</div>
-                                <div className="text-xs text-slate-500">{reqItem.student_email}</div>
-                              </td>
-                              <td className="py-4 px-4 font-mono font-bold text-slate-300">{reqItem.current_remaining}</td>
-                              <td className="py-4 px-4 font-mono font-bold text-indigo-400 text-base">+{reqItem.requested_credits}</td>
-                              <td className="py-4 px-4 text-slate-300 max-w-xs truncate" title={reqItem.reason}>
-                                {reqItem.reason}
-                              </td>
-                              <td className="py-4 px-4 text-slate-500 text-xs">
-                                {new Date(reqItem.created_at).toLocaleString()}
-                              </td>
-                              <td className="py-4 px-4">
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider
-                                  ${reqItem.status === 'approved' 
-                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                                    : reqItem.status === 'rejected' 
-                                    ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
-                                    : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                                  }`}>
-                                  {reqItem.status}
-                                </span>
-                              </td>
+                            <tr key={reqItem.id}>
+                              <td className="py-4 px-4 text-white">{reqItem.student_name}</td>
+                              <td className="py-4 px-4 text-indigo-400 font-bold">+{reqItem.requested_credits}</td>
+                              <td className="py-4 px-4 text-slate-300">{reqItem.status}</td>
                               <td className="py-4 px-4 text-right">
-                                {reqItem.status === 'pending' ? (
-                                  <div className="inline-flex gap-2 justify-end">
-                                    <button
-                                      onClick={() => handleApprove(reqItem.id)}
-                                      className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors flex items-center gap-1 active:scale-95"
-                                    >
-                                      Approve
-                                    </button>
-                                    <button
-                                      onClick={() => handleReject(reqItem.id)}
-                                      className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition-colors flex items-center gap-1 active:scale-95"
-                                    >
-                                      Reject
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <span className="text-slate-500 text-xs">Processed</span>
+                                {reqItem.status === 'pending' && (
+                                  <button onClick={() => handleApprove(reqItem.id)} className="bg-emerald-600 px-3 py-1 rounded">Approve</button>
                                 )}
                               </td>
                             </tr>
@@ -698,73 +372,79 @@ const SuperAdminDashboard = () => {
               {/* RENDER VIEW: CREDIT TRANSACTIONS */}
               {activeTab === 'Credit Transactions' && (
                 <div className="bg-[#0A0F20] border border-slate-800/80 rounded-[2rem] p-8 shadow-xl">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                  <table className="w-full">
+                    <tbody className="divide-y divide-slate-800/60 text-sm">
+                      {creditTransactions.map((tx) => (
+                        <tr key={tx.id}>
+                          <td className="py-4 px-4 text-white">{tx.student_name}</td>
+                          <td className="py-4 px-4 text-indigo-400">{tx.transaction_type}</td>
+                          <td className="py-4 px-4 font-bold text-slate-300">{tx.balance_after}</td>
+                          <td className="px-4 py-3 text-sm">{tx.description || '-'}</td>
+                          <td className="px-4 py-3 text-sm">{new Date(tx.created_at).toLocaleDateString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* RENDER VIEW: REGISTRATION CONFIG */}
+              {activeTab === 'Registration Config' && (
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mt-6">
+                  <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                     <div>
-                      <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                        <History className="text-indigo-400" size={24} />
-                        Credit Transactions Log
-                      </h2>
-                      <p className="text-sm text-slate-500 mt-1">Audit log of all learning credit changes and consumption across the system</p>
+                      <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <SettingsIcon size={20} className="text-indigo-500" />
+                        Registration Credits Configuration
+                      </h3>
+                      <p className="text-sm text-slate-500 mt-1">Manage credit costs for each stage of the GST Registration workflow.</p>
                     </div>
                   </div>
-
-                  {creditTransactions.length === 0 ? (
-                    <div className="py-20 text-center text-slate-500 text-sm">
-                      No transactions recorded yet in the system.
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="border-b border-slate-800 text-slate-400 text-xs font-bold uppercase tracking-wider">
-                            <th className="py-4 px-4">Student Info</th>
-                            <th className="py-4 px-4">Transaction Type</th>
-                            <th className="py-4 px-4">Credits</th>
-                            <th className="py-4 px-4">Balance After</th>
-                            <th className="py-4 px-4">Description</th>
-                            <th className="py-4 px-4">Date</th>
+                  <div className="p-0">
+                    <table className="w-full">
+                      <thead className="bg-slate-50/50 border-b border-slate-200">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Action Key</th>
+                          <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Stage Description</th>
+                          <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Credit Cost</th>
+                          <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {creditConfigs.map((config) => (
+                          <tr key={config.action_key} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-6 py-4 text-sm font-medium text-slate-900">{config.action_key}</td>
+                            <td className="px-6 py-4 text-sm text-slate-600">{config.action_name}</td>
+                            <td className="px-6 py-4 text-sm">
+                              {editingConfig === config.action_key ? (
+                                <input 
+                                  type="number" 
+                                  id={`input-${config.action_key}`}
+                                  defaultValue={config.credit_cost}
+                                  className="w-20 px-2 py-1 border border-slate-300 rounded text-black"
+                                />
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 font-medium">
+                                  <Coins size={14} />
+                                  {config.credit_cost}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-right space-x-2">
+                              {editingConfig === config.action_key ? (
+                                <>
+                                  <button onClick={() => handleUpdateConfig(config.action_key, parseInt(document.getElementById(`input-${config.action_key}`).value))} className="text-emerald-600 hover:text-emerald-700 text-sm font-bold">Save</button>
+                                  <button onClick={() => setEditingConfig(null)} className="text-slate-400 hover:text-slate-600 text-sm">Cancel</button>
+                                </>
+                              ) : (
+                                <button onClick={() => setEditingConfig(config.action_key)} className="text-indigo-600 hover:text-indigo-700 text-sm font-bold">Edit</button>
+                              )}
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800/60 text-sm">
-                          {creditTransactions.map((tx) => {
-                            const typeColors = {
-                              credit_added: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/25',
-                              credit_used: 'bg-rose-500/10 text-rose-400 border border-rose-500/25',
-                              credit_request_approved: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25',
-                              credit_request_rejected: 'bg-red-500/10 text-red-400 border border-red-500/25',
-                            };
-                            const typeLabels = {
-                              credit_added: 'Credit Added',
-                              credit_used: 'Credit Used',
-                              credit_request_approved: 'Request Approved',
-                              credit_request_rejected: 'Request Rejected',
-                            };
-                            return (
-                              <tr key={tx.id} className="hover:bg-white/[0.01] transition-colors">
-                                <td className="py-4 px-4 font-bold text-white">
-                                  <div>{tx.student_name}</div>
-                                  <div className="text-xs text-slate-500 font-normal">{tx.student_email}</div>
-                                </td>
-                                <td className="py-4 px-4">
-                                  <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold border ${typeColors[tx.transaction_type] || 'bg-slate-800 text-slate-400'}`}>
-                                    {typeLabels[tx.transaction_type] || tx.transaction_type}
-                                  </span>
-                                </td>
-                                <td className="py-4 px-4 font-bold text-white">
-                                  {tx.transaction_type === 'credit_used' || tx.transaction_type === 'credit_request_rejected' ? '-' : '+'}{tx.credits}
-                                </td>
-                                <td className="py-4 px-4 font-bold text-slate-300">{tx.balance_after}</td>
-                                <td className="py-4 px-4 text-slate-300">{tx.description}</td>
-                                <td className="py-4 px-4 text-slate-500 text-xs">
-                                  {new Date(tx.created_at).toLocaleString()}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
 

@@ -10,7 +10,9 @@ const {
   getSuperadminCreditRequests,
   approveCreditRequest,
   rejectCreditRequest,
-  getSuperadminTransactions
+  getSuperadminTransactions,
+  getCreditConfig,
+  updateCreditConfig
 } = require('../controllers/creditsController');
 
 // ==========================================
@@ -30,5 +32,7 @@ router.get('/superadmin/credit-requests', protect, authorize('superadmin'), getS
 router.post('/superadmin/credit-requests/:id/approve', protect, authorize('superadmin'), approveCreditRequest);
 router.post('/superadmin/credit-requests/:id/reject', protect, authorize('superadmin'), rejectCreditRequest);
 router.get('/superadmin/credit-transactions', protect, authorize('superadmin'), getSuperadminTransactions);
+router.get('/superadmin/credit-config', protect, authorize('superadmin'), getCreditConfig);
+router.put('/superadmin/credit-config/:key', protect, authorize('superadmin'), updateCreditConfig);
 
 module.exports = router;
