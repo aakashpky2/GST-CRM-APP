@@ -44,7 +44,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import api from '../services/api';
 import toast from 'react-hot-toast';
 import CreditWalletCard from '../components/CreditWalletCard';
 
@@ -113,16 +113,15 @@ const Dashboard = () => {
   const [reqReason, setReqReason] = useState('');
   const [reqLoading, setReqLoading] = useState(false);
 
-  const BACKEND_URL = import.meta.env.VITE_API_URL || 'https://gst-crm-app.onrender.com';
-  const API_BASE = BACKEND_URL.endsWith('/api') ? BACKEND_URL : `${BACKEND_URL.replace(/\/$/, '')}/api`;
+
 
   const fetchCreditsData = async () => {
     try {
-      const credRes = await axios.get(`${API_BASE}/student/credits`);
+      const credRes = await api.get(`/student/credits`);
       if (credRes.data.success) {
         setCredits(credRes.data.credits);
       }
-      const txRes = await axios.get(`${API_BASE}/student/credits/transactions`);
+      const txRes = await api.get(`/student/credits/transactions`);
       if (txRes.data.success) {
         setTransactions(txRes.data.transactions);
       }
@@ -151,7 +150,7 @@ const Dashboard = () => {
 
     setReqLoading(true);
     try {
-      const res = await axios.post(`${API_BASE}/student/credits/request`, {
+      const res = await api.post(`/student/credits/request`, {
         requested_credits: parseInt(reqAmount),
         reason: reqReason.trim()
       });

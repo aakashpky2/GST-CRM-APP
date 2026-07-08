@@ -20,6 +20,12 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
+import VideoCard from '../components/VideoCard';
+import AddEditVideoModal from '../components/AddEditVideoModal';
+import { fetchVideos, addVideo, updateVideo, deleteVideo } from '../services/VideoService';
+import { useCanManageVideos } from '../hooks/useCanManageVideos';
+
+// Placeholder: videos will be fetched from backend
 
 // Comprehensive mock data for the 8 services
 const SERVICES_DATA = {
@@ -320,6 +326,37 @@ const LearningPage = () => {
     toast.success(`Starting lesson: ${title}`);
   };
 
+  const [videos, setVideos] = useState([]);
+  const [loadingVideos, setLoadingVideos] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editVideo, setEditVideo] = useState(null);
+  const canManage = useCanManageVideos();
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetchVideos();
+        setVideos(res.data.videos || []);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoadingVideos(false);
+      }
+    };
+    load();
+  }, []);
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this video?')) return;
+    try {
+      await deleteVideo(id);
+      toast.success('Video deleted');
+      setVideos(prev => prev.filter(v => v.id !== id));
+    } catch (e) {
+      toast.error('Failed to delete video');
+    }
+  };
+
   return (
     <div className="space-y-8 pb-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 font-sans bg-[#F8FAFC]">
       {/* Back to Dashboard Link */}
@@ -496,28 +533,30 @@ const LearningPage = () => {
             {/* TAB CONTENT: VIDEOS */}
             {activeTab === 'Videos' && (
               <div className="space-y-6">
-                <h3 className="text-xl font-bold text-slate-900">Expert Video Lectures</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {data.videos.map((vid) => (
-                    <div 
-                      key={vid.id} 
-                      className="bg-slate-50 rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
-                    >
-                      <div className="aspect-video bg-slate-900 flex items-center justify-center text-white relative">
-                        <PlayCircle className="text-white opacity-80 hover:opacity-100 hover:scale-110 transition-all cursor-pointer" size={50} />
-                        <span className="absolute bottom-3 right-3 text-[10px] bg-black/60 px-2 py-0.5 rounded font-mono text-white">
-                          {vid.duration}
-                        </span>
+                <h3 className="text-xl font-bold text-slate-900 flex items-center justify-between">
+                  Expert Video Lectures
+                  {canManage && (
+                    <button onClick={() => { setEditVideo(null); setShowModal(true); }} className="bg-cyan-600 text-white px-3 py-1 rounded hover:bg-cyan-700 transition">
+                      + Add Video
+                    </button>
+                  )}
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {loadingVideos ? (
+                    <p>Loading videos...</p>
+                  ) : (
+                    videos.map((vid) => (
+                      <div key={vid.id} className="relative group">
+                        <VideoCard video={vid} />
+                        {canManage && (
+                          <div className="absolute top-2 right-2 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => { setEditVideo(vid); setShowModal(true); }} className="text-cyan-600 hover:text-cyan-800">Edit</button>
+                            <button onClick={() => handleDelete(vid.id)} className="text-red-600 hover:text-red-800">Delete</button>
+                          </div>
+                        )}
                       </div>
-                      <div className="p-4 space-y-2">
-                        <h4 className="font-bold text-slate-900 text-sm leading-snug">{vid.title}</h4>
-                        <div className="flex justify-between items-center text-xs text-slate-500">
-                          <span className="flex items-center gap-1"><Star className="text-amber-400 fill-amber-400" size={14} /> {vid.rating}</span>
-                          <span>Compliance Lecture</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
             )}
@@ -628,6 +667,31 @@ const LearningPage = () => {
             )}
           </motion.div>
         </AnimatePresence>
+        {showModal && (
+          <AddEditVideoModal
+            isOpen={showModal}
+            onClose={() => setShowModal(false)}
+            isEdit={!!editVideo}
+            initialUrl={editVideo ? (editVideo.youtube_url || editVideo.url) : ''}
+            onSubmit={async (url) => {
+              try {
+                if (editVideo) {
+                  const res = await updateVideo(editVideo.id, url);
+                  setVideos(prev => prev.map(v => v.id === editVideo.id ? res.data.video : v));
+                  toast.success('Video updated');
+                } else {
+                  const res = await addVideo(url);
+                  const newVideo = res.data.video;
+                  setVideos(prev => [newVideo, ...prev]);
+                  toast.success('Video added');
+                }
+                setShowModal(false);
+              } catch (e) {
+                toast.error(e.response?.data?.message || 'Failed to save video');
+              }
+            }}
+          />
+        )}
       </div>
     </div>
   );

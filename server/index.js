@@ -17,6 +17,7 @@ if (missing.length > 0) {
 const authRoutes = require('./routes/auth');
 const itemRoutes = require('./routes/items');
 const superadminRoutes = require('./routes/superadmin');
+const learningVideosRoutes = require('./routes/learningVideos');
 const creditsRoutes = require('./routes/credits');
 const sessionRoutes = require('./routes/sessions');
 const errorHandler = require('./middleware/error');
@@ -80,6 +81,7 @@ app.use('/api/items', itemRoutes);
 app.use('/api/superadmin', superadminRoutes);
 app.use('/api/session', sessionRoutes);
 app.use('/api', creditsRoutes);
+app.use('/api/learning/videos', learningVideosRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

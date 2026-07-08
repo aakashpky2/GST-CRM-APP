@@ -14,7 +14,8 @@ import {
   Shield,
   FileText,
   UserCheck,
-  TrendingUp
+  TrendingUp,
+  Video
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -47,6 +48,7 @@ const AdminDashboard = () => {
     { name: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { name: 'User Management', icon: <Users size={20} /> },
     { name: 'System Roles', icon: <ShieldAlert size={20} /> },
+    { name: 'Videos', icon: <Video size={20} /> },
     { name: 'Settings', icon: <SettingsIcon size={20} /> },
   ];
 
@@ -287,6 +289,26 @@ const AdminDashboard = () => {
                       <p className="text-slate-500 text-sm">
                         This section lists and allows modifications of system-wide settings. Advanced parameters are actively enforced for the Admin console.
                       </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* RENDER VIEW: VIDEOS */}
+              {activeTab === 'Videos' && (
+                <div className="bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm">
+                  <div className="flex flex-col items-center py-8">
+                    <h3 className="text-2xl font-bold text-slate-900 mb-6">CRM Overview Videos</h3>
+                    <div className="overflow-hidden rounded-3xl shadow-xl border border-slate-200">
+                      <iframe 
+                        width="315" 
+                        height="560" 
+                        src="https://www.youtube.com/embed/IwJNM2yS7wk" 
+                        title="YouTube video player" 
+                        frameBorder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allowFullScreen
+                      ></iframe>
                     </div>
                   </div>
                 </div>
