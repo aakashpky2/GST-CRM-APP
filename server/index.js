@@ -2,7 +2,17 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
+
+// Strict Environment Variable Validation
+const requiredEnv = ['SUPABASE_URL', 'SUPABASE_ANON_KEY'];
+const missing = requiredEnv.filter(key => !process.env[key]);
+if (missing.length > 0) {
+  console.error(`CRITICAL STARTUP ERROR: Missing required environment variables: ${missing.join(', ')}`);
+  process.exit(1);
+}
 
 const authRoutes = require('./routes/auth');
 const itemRoutes = require('./routes/items');
@@ -19,7 +29,18 @@ app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
 });
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: false,
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "blob:", "http://localhost:5173", "http://localhost:5174", "http://localhost:5000"],
+      connectSrc: ["'self'", "http://localhost:5174", "http://localhost:5000"],
+      imgSrc: ["'self'", "data:"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+    }
+  }
+}));
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
@@ -41,12 +62,20 @@ app.use(cors({
 }));
 app.use(morgan('dev'));
 app.use(express.json());
+app.use(compression()); // Compress all responses
+
+// Rate limiting for auth routes
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.'
+});
 
 // Routes
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date(), service: 'crm-app-backend' });
+  res.json({ success: true, timestamp: new Date(), service: 'crm-app-backend' });
 });
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/superadmin', superadminRoutes);
 app.use('/api/session', sessionRoutes);

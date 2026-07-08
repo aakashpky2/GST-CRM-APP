@@ -25,19 +25,18 @@ exports.protect = async (req, res, next) => {
     const { data: { user }, error } = await supabase.auth.getUser(token);
 
     if (error || !user) {
-      console.log('SUPABASE JWT VERIFICATION FAILED:', error?.message || 'No user returned');
+      console.warn('SUPABASE JWT VERIFICATION FAILED:', error?.message || 'No user returned');
       return res.status(401).json({
         success: false,
         message: 'Invalid or expired token',
+        error: error?.message || 'Token verification failed'
       });
     }
-
-    console.log('SUPABASE JWT VERIFICATION SUCCESS: User ID', user.id);
 
     // Fetch profile details from public.users to attach role/permissions
     const { data: dbUser, error: dbError } = await supabase.supabaseAdmin
       .from('users')
-      .select('*')
+      .select('id, username, role, status, permissions')
       .eq('id', user.id)
       .maybeSingle();
 
@@ -77,13 +76,13 @@ exports.protect = async (req, res, next) => {
       permissions
     };
 
-    console.log('---------------- PROTECT MIDDLEWARE DONE ----------------');
     next();
   } catch (error) {
-    console.log('UNEXPECTED PROTECT ERROR:', error.message);
-    return res.status(401).json({
+    console.error('UNEXPECTED PROTECT ERROR:', error.message);
+    return res.status(500).json({
       success: false,
-      message: 'Invalid or expired token',
+      message: 'Server error during authentication',
+      error: error.message
     });
   }
 };

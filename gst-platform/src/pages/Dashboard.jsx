@@ -325,7 +325,7 @@ const Dashboard = () => {
               </div>
               <div className="h-[200px] w-full">
                 {mounted && (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={200}>
                     <BarChart data={learningWeeklyActivity}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 10, fontWeight: 600 }} />
@@ -350,7 +350,7 @@ const Dashboard = () => {
               </div>
               <div className="h-[200px] w-full">
                 {mounted && (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={200}>
                     <LineChart data={completionStats}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 9, fontWeight: 600 }} />

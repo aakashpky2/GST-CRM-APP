@@ -1,6 +1,4 @@
 const supabase = require('../config/supabase');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
 
 // @desc    Super Admin Login
 // @route   POST /api/superadmin/login

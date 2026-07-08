@@ -1,15 +1,23 @@
 const errorHandler = (err, req, res, next) => {
-  console.error(err.stack);
+  console.error(`[ERROR] ${err.message || 'Unknown error'}`);
 
-  const status = err.status || 500;
-  const message = err.message || 'Internal Server Error';
+  let status = err.status || 500;
+  let message = err.message || 'Internal Server Error';
+
+  // Handle Supabase/PostgREST specific errors gracefully
+  if (err.code && typeof err.code === 'string' && err.code.startsWith('23')) {
+    status = 400; // Constraint violation
+    message = 'A database constraint was violated.';
+  }
 
   res.status(status).json({
     success: false,
-    status,
-    message: err.message,
-    details: err,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    message: message,
+    // Only include details/stack in development
+    ...(process.env.NODE_ENV === 'development' && {
+      details: err,
+      stack: err.stack,
+    }),
   });
 };
 

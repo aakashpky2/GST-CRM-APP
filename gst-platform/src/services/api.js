@@ -8,14 +8,27 @@ const api = axios.create({
   baseURL: API_URL,
 });
 
-// Add a request interceptor to include the Supabase session token
+// Add a request interceptor to include the auth token
 api.interceptors.request.use(async (config) => {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) {
-    config.headers.Authorization = `Bearer ${session.access_token}`;
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
+
+// Add a response interceptor to handle 401s (invalid/expired tokens)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      console.warn('API returned 401 Unauthorized. Clearing local storage and redirecting to login.');
+      localStorage.clear();
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const itemService = {
   getAll: (params) => api.get('/items', { params }),
