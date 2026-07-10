@@ -23,6 +23,8 @@ import { toast } from 'react-hot-toast';
 import VideoCard from '../components/VideoCard';
 import AddEditVideoModal from '../components/AddEditVideoModal';
 import { fetchVideos, addVideo, updateVideo, deleteVideo } from '../services/VideoService';
+import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { useCanManageVideos } from '../hooks/useCanManageVideos';
 
 // Placeholder: videos will be fetched from backend
@@ -330,6 +332,8 @@ const LearningPage = () => {
   const [loadingVideos, setLoadingVideos] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editVideo, setEditVideo] = useState(null);
+  const [credits, setCredits] = useState(null);
+  const { user } = useAuth();
   const canManage = useCanManageVideos();
 
   useEffect(() => {
@@ -337,6 +341,13 @@ const LearningPage = () => {
       try {
         const res = await fetchVideos();
         setVideos(res.data.videos || []);
+        
+        if (user?.role === 'student') {
+          const creditRes = await api.get('/credits/summary');
+          setCredits(creditRes.data.balance || 0);
+        } else {
+          setCredits(9999); // Admins/managers bypass credit check visually here
+        }
       } catch (e) {
         console.error(e);
       } finally {
@@ -344,7 +355,7 @@ const LearningPage = () => {
       }
     };
     load();
-  }, []);
+  }, [user]);
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this video?')) return;
@@ -541,23 +552,31 @@ const LearningPage = () => {
                     </button>
                   )}
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {loadingVideos ? (
-                    <p>Loading videos...</p>
-                  ) : (
-                    videos.map((vid) => (
-                      <div key={vid.id} className="relative group">
-                        <VideoCard video={vid} />
-                        {canManage && (
-                          <div className="absolute top-2 right-2 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => { setEditVideo(vid); setShowModal(true); }} className="text-cyan-600 hover:text-cyan-800">Edit</button>
-                            <button onClick={() => handleDelete(vid.id)} className="text-red-600 hover:text-red-800">Delete</button>
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
+                
+                {user?.role === 'student' && credits === 0 ? (
+                  <div className="bg-rose-50 border border-rose-100 p-8 rounded-2xl text-center">
+                    <h4 className="text-lg font-bold text-rose-600 mb-2">Access Restricted</h4>
+                    <p className="text-rose-500">No learning credits available. Please contact your Manager or Institute to request more credits.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {loadingVideos ? (
+                      <p>Loading videos...</p>
+                    ) : (
+                      videos.map((vid) => (
+                        <div key={vid.id} className="relative group">
+                          <VideoCard video={vid} />
+                          {canManage && (
+                            <div className="absolute top-2 right-2 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => { setEditVideo(vid); setShowModal(true); }} className="text-cyan-600 hover:text-cyan-800 bg-white/90 px-2 py-1 rounded text-xs">Edit</button>
+                              <button onClick={() => handleDelete(vid.id)} className="text-red-600 hover:text-red-800 bg-white/90 px-2 py-1 rounded text-xs">Delete</button>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

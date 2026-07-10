@@ -123,14 +123,43 @@ const LearningServiceRoute = ({ children }) => {
   const hasLearningService = 
     user.role === 'superadmin' || 
     user.role === 'admin' || 
-    user.permissions?.learning_service === true ||
-    user.permissions === undefined;
+    user.permissions?.learning_service === true;
 
   if (!hasLearningService) {
     return (
       <div className="flex flex-col items-center justify-center p-12 bg-white rounded-[2rem] border border-slate-100 shadow-sm mt-10 max-w-xl mx-auto text-center">
         <h1 className="text-2xl font-bold text-slate-800 mb-2">Access Denied</h1>
         <p className="text-slate-500 text-sm">You do not have permission to access the Learning Service. Contact your administrator for access.</p>
+      </div>
+    );
+  }
+  
+  return children;
+};
+
+// Hierarchy Management Protected Route Component
+const HierarchyRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-[#F8FAFC]">
+        <div className="w-10 h-10 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  const hasHierarchy = user.permissions?.hierarchy_management === true;
+
+  if (!hasHierarchy) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 bg-white rounded-[2rem] border border-slate-100 shadow-sm mt-10 max-w-xl mx-auto text-center">
+        <h1 className="text-2xl font-bold text-slate-800 mb-2">Access Denied</h1>
+        <p className="text-slate-500 text-sm">You do not have permission to manage teams.</p>
       </div>
     );
   }
@@ -180,6 +209,7 @@ function App() {
             <Route path="projects" element={<Projects />} />
             <Route path="system-role" element={<AdminPanelRoute><SystemRole /></AdminPanelRoute>} />
             <Route path="user-management" element={<AdminPanelRoute><UserManagement /></AdminPanelRoute>} />
+            <Route path="team-management" element={<HierarchyRoute><UserManagement /></HierarchyRoute>} />
           </Route>
 
           {/* Catch all */}

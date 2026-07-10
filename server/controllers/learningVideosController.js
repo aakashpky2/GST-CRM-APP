@@ -29,9 +29,26 @@ async function extractYouTubeInfo(url) {
 // GET all videos
 exports.getAllVideos = async (req, res) => {
   try {
-    const { data, error } = await supabaseAdmin.from('learning_videos')
-      .select('*')
-      .order('created_at', { ascending: false });
+    let query = supabaseAdmin.from('learning_videos').select('*').order('created_at', { ascending: false });
+
+    // Filter by allowed modules for non-admin users
+    const userRole = req.user?.role;
+    if (userRole !== 'admin' && userRole !== 'superadmin') {
+      const allowedModules = [];
+      const modules = req.user?.permissions?.modules || {};
+      
+      for (const [mod, isAllowed] of Object.entries(modules)) {
+        if (isAllowed) allowedModules.push(mod);
+      }
+      
+      if (allowedModules.length === 0) {
+        return res.json({ success: true, videos: [] });
+      }
+      
+      query = query.in('category', allowedModules);
+    }
+
+    const { data, error } = await query;
     if (error) throw error;
     res.json({ success: true, videos: data });
   } catch (err) {

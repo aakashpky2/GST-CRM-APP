@@ -47,6 +47,8 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import CreditWalletCard from '../components/CreditWalletCard';
+import { fetchVideos } from '../services/VideoService';
+import VideoCard from '../components/VideoCard';
 
 // Beautiful premium mock data for charts and cards
 const learningWeeklyActivity = [
@@ -113,6 +115,10 @@ const Dashboard = () => {
   const [reqReason, setReqReason] = useState('');
   const [reqLoading, setReqLoading] = useState(false);
 
+  // Videos State
+  const [videos, setVideos] = useState([]);
+  const [loadingVideos, setLoadingVideos] = useState(true);
+
 
 
   const fetchCreditsData = async () => {
@@ -130,10 +136,23 @@ const Dashboard = () => {
     }
   };
 
+  const loadVideos = async () => {
+    try {
+      setLoadingVideos(true);
+      const res = await fetchVideos();
+      setVideos(res.data.videos || []);
+    } catch (e) {
+      console.error('Error fetching videos:', e);
+    } finally {
+      setLoadingVideos(false);
+    }
+  };
+
   useEffect(() => {
     setMounted(true);
     if (user?.role === 'student') {
       fetchCreditsData();
+      loadVideos();
     }
   }, [user]);
 
@@ -591,6 +610,29 @@ const Dashboard = () => {
                   </tbody>
                 </table>
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Latest Learning Videos Section */}
+      {user?.role === 'student' && (
+        <div className="space-y-4 mt-8">
+          <div>
+            <h2 className="text-2xl font-black text-slate-900">Latest Learning Videos</h2>
+            <p className="text-slate-500 text-sm mt-0.5">Watch new learning content uploaded by the Admin.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {loadingVideos ? (
+              <p className="text-slate-500">Loading videos...</p>
+            ) : videos.length === 0 ? (
+              <p className="text-slate-500 col-span-full bg-white p-6 rounded-2xl border border-slate-100 text-center">No learning videos available yet.</p>
+            ) : (
+              videos.map((vid) => (
+                <div key={vid.id}>
+                  <VideoCard video={vid} />
+                </div>
+              ))
             )}
           </div>
         </div>

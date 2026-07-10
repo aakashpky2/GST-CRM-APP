@@ -57,13 +57,14 @@ exports.protect = async (req, res, next) => {
     }
 
     let permissions = dbUser.permissions;
-    if (!permissions) {
+    if (!permissions || Object.keys(permissions).length === 0) {
       if (dbUser.role === 'admin' || dbUser.role === 'superadmin') {
-        permissions = { admin_panel: true, learning_service: true };
-      } else if (dbUser.role === 'student' || dbUser.role === 'manager' || dbUser.role === 'institute') {
-        permissions = { admin_panel: false, learning_service: true };
+        permissions = { admin_panel: true, learning_service: true, hierarchy_management: true, modules: { gst: true, income_tax: true, roc: true, trademark: true, accounting: true, payroll: true, audit: true, company_registration: true } };
+      } else if (dbUser.role === 'student' || dbUser.role === 'manager' || dbUser.role === 'institute' || dbUser.role === 'channel') {
+        const isManagerOrAbove = dbUser.role !== 'student';
+        permissions = { admin_panel: false, learning_service: true, hierarchy_management: isManagerOrAbove, modules: { gst: true, income_tax: false, roc: false, trademark: false, accounting: false, payroll: false, audit: false, company_registration: false } };
       } else {
-        permissions = { admin_panel: false, learning_service: false };
+        permissions = { admin_panel: false, learning_service: false, hierarchy_management: false, modules: {} };
       }
     }
 

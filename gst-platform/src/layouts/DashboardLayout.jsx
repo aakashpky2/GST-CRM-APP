@@ -229,6 +229,22 @@ const DashboardLayout = () => {
             })}
           </div>
 
+          {/* Hierarchy Management Section */}
+          {user?.permissions?.hierarchy_management && (
+            <div className="space-y-1.5">
+              {isSidebarOpen && (
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">Hierarchy Management</p>
+              )}
+              <SidebarItem
+                icon={<Users size={20} />}
+                label="Team Management"
+                path="/team-management"
+                isOpen={isSidebarOpen}
+                isActive={location.pathname === '/team-management'}
+              />
+            </div>
+          )}
+
           {/* Learning Services Section */}
           {(user?.role === 'superadmin' || user?.role === 'admin' || user?.role === 'student') && (
             <div className="space-y-1.5">

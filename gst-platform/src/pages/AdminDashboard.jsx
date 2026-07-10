@@ -22,6 +22,7 @@ import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import UserManagement from './UserManagement';
 import SystemRole from './SystemRole';
+import ManageVideos from '../components/ManageVideos';
 
 const AdminDashboard = () => {
   const { logout, user } = useAuth();
@@ -49,6 +50,7 @@ const AdminDashboard = () => {
     { name: 'User Management', icon: <Users size={20} /> },
     { name: 'System Roles', icon: <ShieldAlert size={20} /> },
     { name: 'Videos', icon: <Video size={20} /> },
+    { name: 'Learning Portal', icon: <FileText size={20} /> },
     { name: 'Settings', icon: <SettingsIcon size={20} /> },
   ];
 
@@ -311,6 +313,13 @@ const AdminDashboard = () => {
                       ></iframe>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* RENDER VIEW: LEARNING PORTAL */}
+              {activeTab === 'Learning Portal' && (
+                <div className="bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm">
+                  <ManageVideos />
                 </div>
               )}
             </motion.div>

@@ -1,22 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Plus, Search, Filter, Eye, Edit2, Trash2, X, Info,
   User, ChevronDown, ToggleLeft, ToggleRight, AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRoles } from '../context/RolesContext';
+import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
+import api from '../services/api';
 
 const STATUS_BADGE = {
   Active:   'bg-emerald-50 text-emerald-700 border-emerald-100',
   Inactive: 'bg-slate-50 text-slate-500 border-slate-100',
+  active:   'bg-emerald-50 text-emerald-700 border-emerald-100',
+  inactive: 'bg-slate-50 text-slate-500 border-slate-100',
 };
 
-const DUMMY_CHANNELS   = ['North', 'South', 'East', 'West'];
-const DUMMY_INSTITUTES = ['IIM Ahmedabad', 'IIT Madras', 'Delhi University', 'BITS Pilani'];
-const DUMMY_MANAGERS   = ['Aarav Sharma', 'Sunita Gupta'];
-
-const FILTER_OPTIONS = ['All Users', 'Students'];
+const FILTER_OPTIONS = ['All Users', 'superadmin', 'admin', 'channel', 'institute', 'manager', 'student'];
 
 /* ─── Reusable Select ─── */
 const Select = ({ label, value, onChange, options, placeholder }) => (
@@ -36,17 +36,12 @@ const Select = ({ label, value, onChange, options, placeholder }) => (
   </div>
 );
 
-const initialUsers = [
-  { id: 1, name: 'Aarav Sharma',  email: 'aarav@dbiz.in',  username: 'aarav_s',  roleId: 'role_students',  channel: 'North', institute: 'IIM Ahmedabad', manager: 'Sunita Gupta',  status: 'Active',   created: '2026-04-10' },
-  { id: 2, name: 'Priya Nair',    email: 'priya@dbiz.in',  username: 'priya_n',  roleId: 'role_students', channel: 'South', institute: 'IIT Madras',    manager: 'Aarav Sharma',  status: 'Active',   created: '2026-04-15' },
-  { id: 3, name: 'Rohit Verma',   email: 'rohit@dbiz.in',  username: 'rohit_v',  roleId: 'role_students', channel: 'East',  institute: 'Delhi University', manager: 'Sunita Gupta',  status: 'Inactive', created: '2026-03-22' },
-  { id: 4, name: 'Sunita Gupta',  email: 'sunita@dbiz.in', username: 'sunita_g', roleId: 'role_students',  channel: 'West',      institute: 'BITS Pilani',     manager: 'Aarav Sharma',  status: 'Active',   created: '2026-05-01' },
-];
-
 const UserManagement = () => {
-  const { activeRoles, roles, incrementRoleUserCount, decrementRoleUserCount } = useRoles();
+  const { roles } = useRoles();
+  const { user: currentUser } = useAuth();
 
-  const [users, setUsers]             = useState(initialUsers);
+  const [users, setUsers]             = useState([]);
+  const [loading, setLoading]         = useState(true);
   const [search, setSearch]           = useState('');
   const [filter, setFilter]           = useState('All Users');
   const [isModalOpen, setModalOpen]   = useState(false);
@@ -57,34 +52,56 @@ const UserManagement = () => {
   const [email,      setEmail]      = useState('');
   const [username,   setUsername]   = useState('');
   const [password,   setPassword]   = useState('');
-  const [roleId,     setRoleId]     = useState('');
-  const [channel,    setChannel]    = useState('');
-  const [institute,  setInstitute]  = useState('');
-  const [manager,    setManager]    = useState('');
+  const [role,       setRole]       = useState('');
   const [isActive,   setIsActive]   = useState(true);
+  
   const [permAdminPanel, setPermAdminPanel] = useState(false);
   const [permLearningService, setPermLearningService] = useState(false);
 
+  // Fetch users
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const res = await api.get('/users');
+      setUsers(res.data.users || []);
+    } catch (e) {
+      toast.error('Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   /* ─── Helpers ─── */
-  const getRoleById   = (id)   => roles.find(r => r.id === id);
-  const getRoleName   = (id)   => getRoleById(id)?.name ?? '—';
   const getRoleBadge  = (name) => {
     const map = {
-      Channel:   'bg-blue-50 text-blue-700',
-      Institute: 'bg-purple-50 text-purple-700',
-      Manager:   'bg-orange-50 text-orange-700',
-      Students:  'bg-cyan-50 text-cyan-700',
+      channel:   'bg-blue-50 text-blue-700',
+      institute: 'bg-purple-50 text-purple-700',
+      manager:   'bg-orange-50 text-orange-700',
+      student:  'bg-cyan-50 text-cyan-700',
+      admin: 'bg-rose-50 text-rose-700',
+      superadmin: 'bg-indigo-50 text-indigo-700',
     };
     return map[name] ?? 'bg-slate-50 text-slate-600';
   };
 
-  const selectedRole = getRoleById(roleId);
-  const roleName     = selectedRole?.name ?? '';
+  // Determine which roles are allowed based on the hierarchy
+  const getAllowedRoles = () => {
+    const r = currentUser?.role;
+    if (r === 'superadmin' || r === 'admin') return ['superadmin', 'admin', 'channel', 'institute', 'manager', 'student'];
+    if (r === 'channel') return ['institute'];
+    if (r === 'institute') return ['manager'];
+    if (r === 'manager') return ['student'];
+    return [];
+  };
+  const allowedRoles = getAllowedRoles();
 
   /* ─── Reset / open / close ─── */
   const resetForm = () => {
     setFullName(''); setEmail(''); setUsername(''); setPassword('');
-    setRoleId(''); setChannel(''); setInstitute(''); setManager('');
+    setRole(allowedRoles.length === 1 ? allowedRoles[0] : ''); 
     setIsActive(true); setError('');
     setPermAdminPanel(false); setPermLearningService(false);
   };
@@ -92,63 +109,66 @@ const UserManagement = () => {
   const openModal  = () => { resetForm(); setModalOpen(true); };
   const closeModal = () => setModalOpen(false);
 
-  const handleRoleChange = (selectedRoleId) => {
-    setRoleId(selectedRoleId);
-    setChannel('');
-    setInstitute('');
-    setManager('');
-    
-    // Automatically match the role's default permissions
-    const selRole = roles.find(r => r.id === selectedRoleId);
-    if (selRole) {
-      setPermAdminPanel(selRole.permissions.includes('Admin Panel'));
-      setPermLearningService(selRole.permissions.includes('Learning Service'));
+  const handleRoleChange = (r) => {
+    setRole(r);
+    // basic defaults
+    if (r === 'superadmin' || r === 'admin') {
+      setPermAdminPanel(true);
+      setPermLearningService(true);
+    } else {
+      setPermAdminPanel(false);
+      setPermLearningService(true);
     }
   };
 
   /* ─── Create user ─── */
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     setError('');
-    if (!fullName.trim()) { setError('Full Name is required.'); return; }
+    if (!username.trim()) { setError('Username is required.'); return; }
     if (!email.trim())    { setError('Email is required.'); return; }
-    if (!roleId)          { setError('Role is required.'); return; }
+    if (!password.trim()) { setError('Password is required.'); return; }
+    if (!role)          { setError('Role is required.'); return; }
 
-    const newUser = {
-      id:        users.length + 1,
-      name:      fullName.trim(),
-      email:     email.trim(),
-      username:  username.trim(),
-      roleId,
-      channel:   channel   || '—',
-      institute: institute || '—',
-      manager:   manager   || '—',
-      status:    isActive ? 'Active' : 'Inactive',
-      created:   new Date().toISOString().split('T')[0],
-      permissions: {
-        admin_panel: permAdminPanel,
-        learning_service: permLearningService
-      }
-    };
+    try {
+      const payload = {
+        email: email.trim(),
+        username: username.trim(),
+        password,
+        role,
+        status: isActive ? 'active' : 'inactive',
+        permissions: {
+          admin_panel: permAdminPanel,
+          learning_service: permLearningService
+        }
+      };
 
-    setUsers(prev => [...prev, newUser]);
-    incrementRoleUserCount(roleId);
-    toast.success(`User "${fullName.trim()}" created`);
-    closeModal();
+      const res = await api.post('/users', payload);
+      setUsers(prev => [res.data.user, ...prev]);
+      toast.success(`User "${username.trim()}" created`);
+      closeModal();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create user');
+    }
   };
 
   /* ─── Delete user ─── */
-  const handleDelete = (user) => {
-    setUsers(prev => prev.filter(u => u.id !== user.id));
-    decrementRoleUserCount(user.roleId);
-    toast.success(`User "${user.name}" deleted`);
+  const handleDelete = async (userObj) => {
+    if (!window.confirm(`Are you sure you want to delete ${userObj.username}?`)) return;
+    try {
+      await api.delete(`/users/${userObj.id}`);
+      setUsers(prev => prev.filter(u => u.id !== userObj.id));
+      toast.success(`User "${userObj.username}" deleted`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete user');
+    }
   };
 
   /* ─── Filter ─── */
   const visible = users.filter(u => {
-    const rName = getRoleName(u.roleId);
-    const matchSearch = [u.name, u.email, rName].some(v =>
-      v.toLowerCase().includes(search.toLowerCase())
+    const rName = u.role;
+    const matchSearch = [u.username, u.email, rName].some(v =>
+      v?.toLowerCase().includes(search.toLowerCase())
     );
     const matchFilter = filter === 'All Users' || rName === filter;
     return matchSearch && matchFilter;
@@ -199,7 +219,7 @@ const UserManagement = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/60">
-                {['Name', 'Email', 'Role', 'Channel', 'Institute', 'Manager', 'Status', 'Created Date', 'Actions'].map(col => (
+                {['Username', 'Email', 'Role', 'Status', 'Created Date', 'Actions'].map(col => (
                   <th key={col} className="px-5 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
                     {col}
                   </th>
@@ -207,9 +227,13 @@ const UserManagement = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {visible.length === 0 ? (
+              {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-5 py-14 text-center">
+                  <td colSpan={6} className="px-5 py-14 text-center text-slate-400">Loading users...</td>
+                </tr>
+              ) : visible.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-5 py-14 text-center">
                     <div className="flex flex-col items-center gap-2 text-slate-400">
                       <AlertCircle size={28} />
                       <span className="text-sm font-semibold">No users found</span>
@@ -217,7 +241,7 @@ const UserManagement = () => {
                   </td>
                 </tr>
               ) : visible.map((u, idx) => {
-                const rName = getRoleName(u.roleId);
+                const rName = u.role;
                 return (
                   <motion.tr
                     key={u.id}
@@ -228,27 +252,24 @@ const UserManagement = () => {
                   >
                     <td className="px-5 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                          {u.name[0]}
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0 uppercase">
+                          {u.username?.[0] || 'U'}
                         </div>
-                        <span className="font-semibold text-slate-900">{u.name}</span>
+                        <span className="font-semibold text-slate-900">{u.username}</span>
                       </div>
                     </td>
                     <td className="px-5 py-4 text-slate-500 whitespace-nowrap">{u.email}</td>
                     <td className="px-5 py-4 whitespace-nowrap">
-                      <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${getRoleBadge(rName)}`}>
+                      <span className={`px-2.5 py-1 rounded-lg text-xs font-bold uppercase ${getRoleBadge(rName)}`}>
                         {rName}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-slate-500 whitespace-nowrap">{u.channel}</td>
-                    <td className="px-5 py-4 text-slate-500 whitespace-nowrap">{u.institute}</td>
-                    <td className="px-5 py-4 text-slate-500 whitespace-nowrap">{u.manager}</td>
                     <td className="px-5 py-4 whitespace-nowrap">
-                      <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${STATUS_BADGE[u.status]}`}>
+                      <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border capitalize ${STATUS_BADGE[u.status]}`}>
                         {u.status}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">{u.created}</td>
+                    <td className="px-5 py-4 text-slate-400 text-xs whitespace-nowrap">{new Date(u.created_at).toLocaleDateString()}</td>
                     <td className="px-5 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <button className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 transition-all"><Eye size={15} /></button>
@@ -313,11 +334,11 @@ const UserManagement = () => {
                 )}
 
                 <form id="create-user-form" onSubmit={handleCreate} className="space-y-5">
-                  {/* Full Name */}
+                  {/* Username */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Full Name *</label>
-                    <input type="text" placeholder="e.g. Aarav Sharma" value={fullName}
-                      onChange={e => setFullName(e.target.value)}
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Username *</label>
+                    <input type="text" placeholder="e.g. aarav_s" value={username}
+                      onChange={e => setUsername(e.target.value)}
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:bg-white focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 transition-all"
                     />
                   </div>
@@ -331,14 +352,6 @@ const UserManagement = () => {
                     />
                   </div>
 
-                  {/* Username */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Username</label>
-                    <input type="text" placeholder="e.g. aarav_s" value={username}
-                      onChange={e => setUsername(e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-900 font-medium placeholder:text-slate-400 outline-none focus:bg-white focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 transition-all"
-                    />
-                  </div>
 
                   {/* Password */}
                   <div>
@@ -349,26 +362,26 @@ const UserManagement = () => {
                     />
                   </div>
 
-                  {/* Role — dynamic from RolesContext, only Active roles */}
+                  {/* Role — dynamic from allowedRoles */}
                   <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      Role * <span className="text-cyan-500 font-semibold normal-case tracking-normal">(from System Role)</span>
+                      Role *
                     </label>
-                    {activeRoles.length === 0 ? (
+                    {allowedRoles.length === 0 ? (
                       <div className="flex items-center gap-2 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-amber-700 text-xs font-semibold">
                         <Info size={16} />
-                        No active roles available. Please create a role in System Role first.
+                        You do not have permission to create users.
                       </div>
                     ) : (
                       <div className="relative">
                         <select
-                          value={roleId}
+                          value={role}
                           onChange={e => handleRoleChange(e.target.value)}
-                          className="w-full appearance-none px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-900 font-medium focus:bg-white focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 outline-none cursor-pointer"
+                          className="w-full appearance-none px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-900 font-medium focus:bg-white focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 outline-none cursor-pointer uppercase"
                         >
-                          <option value="">Select active role...</option>
-                          {activeRoles.map(r => (
-                            <option key={r.id} value={r.id}>{r.name}</option>
+                          <option value="">Select role...</option>
+                          {allowedRoles.map(r => (
+                            <option key={r} value={r}>{r}</option>
                           ))}
                         </select>
                         <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -376,23 +389,6 @@ const UserManagement = () => {
                     )}
                   </div>
 
-                  {/* Conditional: Channel (Institute, Manager, Students) */}
-                  {(roleName === 'Institute' || roleName === 'Manager' || roleName === 'Students') && (
-                    <Select label="Channel" value={channel} onChange={setChannel}
-                      options={DUMMY_CHANNELS} placeholder="Select channel..." />
-                  )}
-
-                  {/* Conditional: Institute (Manager, Students) */}
-                  {(roleName === 'Manager' || roleName === 'Students') && (
-                    <Select label="Institute" value={institute} onChange={setInstitute}
-                      options={DUMMY_INSTITUTES} placeholder="Select institute..." />
-                  )}
-
-                  {/* Conditional: Manager (Students only) */}
-                  {roleName === 'Students' && (
-                    <Select label="Manager" value={manager} onChange={setManager}
-                      options={DUMMY_MANAGERS} placeholder="Select manager..." />
-                  )}
 
                   {/* Permissions Selection */}
                   <div className="space-y-3">
