@@ -46,9 +46,9 @@ exports.getStudentCredits = async (req, res, next) => {
     if (!credits) {
       const defaultCredits = {
         student_id: studentId,
-        total_credits: 100,
+        total_credits: 50,
         used_credits: 0,
-        remaining_credits: 100
+        remaining_credits: 50
       };
 
       const { data: newCredits, error: createError } = await supabase.supabaseAdmin
