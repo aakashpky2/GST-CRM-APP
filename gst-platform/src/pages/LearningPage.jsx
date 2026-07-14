@@ -343,8 +343,8 @@ const LearningPage = () => {
         setVideos(res.data.videos || []);
         
         if (user?.role === 'student') {
-          const creditRes = await api.get('/credits/summary');
-          setCredits(creditRes.data.balance || 0);
+          const creditRes = await api.get('/student/credits');
+          setCredits(creditRes.data.credits?.remaining_credits || 0);
         } else {
           setCredits(9999); // Admins/managers bypass credit check visually here
         }

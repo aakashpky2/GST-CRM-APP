@@ -20,6 +20,7 @@ import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import LearningPage from './pages/LearningPage';
 import GSTVideoPlayer from './pages/GSTVideoPlayer';
+import WatchSessionsMonitoring from './pages/WatchSessionsMonitoring';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -209,6 +210,7 @@ function App() {
             <Route path="projects" element={<Projects />} />
             <Route path="system-role" element={<AdminPanelRoute><SystemRole /></AdminPanelRoute>} />
             <Route path="user-management" element={<AdminPanelRoute><UserManagement /></AdminPanelRoute>} />
+            <Route path="watch-monitoring" element={<AdminPanelRoute><WatchSessionsMonitoring /></AdminPanelRoute>} />
             <Route path="team-management" element={<HierarchyRoute><UserManagement /></HierarchyRoute>} />
           </Route>
 

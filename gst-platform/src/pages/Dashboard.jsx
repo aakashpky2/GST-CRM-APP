@@ -46,7 +46,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import CreditWalletCard from '../components/CreditWalletCard';
 import { fetchVideos } from '../services/VideoService';
 import VideoCard from '../components/VideoCard';
 
@@ -115,6 +114,10 @@ const Dashboard = () => {
   const [reqReason, setReqReason] = useState('');
   const [reqLoading, setReqLoading] = useState(false);
 
+  // Watch History State
+  const [watchHistory, setWatchHistory] = useState([]);
+  const [todaysStats, setTodaysStats] = useState({ watchSeconds: 0, creditsBurned: 0, videosCompleted: 0 });
+
   // Videos State
   const [videos, setVideos] = useState([]);
   const [loadingVideos, setLoadingVideos] = useState(true);
@@ -130,6 +133,30 @@ const Dashboard = () => {
       const txRes = await api.get(`/student/credits/transactions`);
       if (txRes.data.success) {
         setTransactions(txRes.data.transactions);
+      }
+      
+      const histRes = await api.get(`/video/watch-history`);
+      if (histRes.data.success) {
+        setWatchHistory(histRes.data.sessions);
+        
+        // Calculate Today's Stats
+        const today = new Date();
+        let tSeconds = 0;
+        let tCredits = 0;
+        let vCompleted = 0;
+        
+        histRes.data.sessions.forEach(session => {
+          const sDate = new Date(session.updated_at || session.created_at);
+          if (sDate.toDateString() === today.toDateString()) {
+            tSeconds += session.watch_seconds || 0;
+            tCredits += session.credits_burned || 0;
+          }
+          if (session.status === 'completed') {
+            vCompleted += 1;
+          }
+        });
+        
+        setTodaysStats({ watchSeconds: tSeconds, creditsBurned: tCredits, videosCompleted: vCompleted });
       }
     } catch (err) {
       console.error('Error fetching credits data:', err);
@@ -194,6 +221,14 @@ const Dashboard = () => {
     navigate(`/learning/${key}`);
   };
 
+  const formatWatchTime = (totalSeconds) => {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m ${s}s`;
+  };
+
   return (
     <div className="space-y-10 pb-12 font-sans bg-[#F8FAFC]">
       
@@ -248,12 +283,6 @@ const Dashboard = () => {
           </div>
         </div>
       </motion.div>
-
-      {user?.role === 'student' && (
-        <div className="mb-4">
-          <CreditWalletCard />
-        </div>
-      )}
 
       {/* 2. Service Learning Cards Section */}
       <div className="space-y-4">
@@ -423,14 +452,23 @@ const Dashboard = () => {
             <span className="text-xs font-semibold text-slate-400">History</span>
           </div>
           <div className="space-y-4">
-            {recentActivities.map((act) => (
-              <div key={act.id} className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+            {watchHistory.length === 0 && <p className="text-sm text-slate-500">No watch activity yet.</p>}
+            {watchHistory.slice(0, 5).map((session) => (
+              <div key={session.id} className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
                 <div className="w-8 h-8 rounded-xl bg-white border border-slate-150 flex items-center justify-center shrink-0">
-                  {act.icon}
+                  <Play className="text-cyan-500" size={16} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-slate-800 leading-tight">{act.desc}</p>
-                  <p className="text-[10px] text-slate-400 mt-1 font-semibold">{act.time}</p>
+                  <p className="text-xs font-bold text-slate-800 leading-tight">
+                    Watched "{session.learning_videos?.title || 'Video'}"
+                  </p>
+                  <p className="text-[10px] text-slate-500 mt-1 font-semibold flex items-center gap-2">
+                    <span>{formatWatchTime(session.watch_seconds)}</span>
+                    <span>•</span>
+                    <span className="text-rose-500">Burned {session.credits_burned} credits</span>
+                    <span>•</span>
+                    <span>{new Date(session.updated_at || session.created_at).toLocaleString()}</span>
+                  </p>
                 </div>
               </div>
             ))}
@@ -533,9 +571,11 @@ const Dashboard = () => {
               </div>
               <p className="text-emerald-100 text-xs font-bold uppercase tracking-wider">Used Credits</p>
               <p className="text-4xl font-extrabold mt-2">{credits?.used_credits ?? 0}</p>
-              <div className="mt-4 flex items-center gap-2 text-emerald-100/80 text-xs">
-                <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                <span>Burned on credit-based modules</span>
+              <div className="mt-4 flex items-center justify-between text-emerald-100/80 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                  <span>Credits Burned Today: <strong className="text-white">{todaysStats.creditsBurned}</strong></span>
+                </div>
               </div>
             </div>
 
@@ -549,6 +589,21 @@ const Dashboard = () => {
               <div className="mt-4 flex items-center gap-2 text-cyan-100/80 text-xs">
                 <div className={`w-1.5 h-1.5 rounded-full ${credits?.remaining_credits > 10 ? 'bg-white' : 'bg-red-400 animate-ping'}`} />
                 <span>{credits?.remaining_credits === 0 ? 'Insufficient credits - request more' : 'Active and available to burn'}</span>
+              </div>
+            </div>
+            
+            {/* Today's Watch Stats */}
+            <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-6 rounded-3xl text-white shadow-lg shadow-purple-500/10 relative overflow-hidden md:col-span-3 lg:col-span-1">
+              <div className="absolute right-0 bottom-0 opacity-10 translate-x-2 translate-y-2 pointer-events-none">
+                <Clock size={140} />
+              </div>
+              <p className="text-purple-100 text-xs font-bold uppercase tracking-wider">Today's Watch Time</p>
+              <p className="text-4xl font-extrabold mt-2">{formatWatchTime(todaysStats.watchSeconds)}</p>
+              <div className="mt-4 flex items-center justify-between text-purple-100/80 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                  <span>Videos Completed Total: <strong className="text-white">{todaysStats.videosCompleted}</strong></span>
+                </div>
               </div>
             </div>
           </div>
