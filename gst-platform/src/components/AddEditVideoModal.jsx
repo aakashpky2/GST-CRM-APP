@@ -66,12 +66,12 @@ const AddEditVideoModal = ({ isOpen, onClose, onSubmit, initialUrl = '', initial
             placeholder="Paste YouTube video link..."
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            className="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-slate-900"
+            className="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-black placeholder-slate-500"
           />
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-white text-slate-900"
+            className="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-white text-black"
           >
             <option value="">Select Category</option>
             {CATEGORIES.map(cat => (
