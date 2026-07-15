@@ -305,7 +305,7 @@ const Dashboard = () => {
                     <BookOpen className="text-white" size={22} />
                   </div>
                   <span className="text-[10px] font-bold text-slate-400 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded">
-                    {service.lessons} Lessons
+                    {videos.filter(v => v.category === service.label).length} Lessons
                   </span>
                 </div>
                 <div className="space-y-1">

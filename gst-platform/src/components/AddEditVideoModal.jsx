@@ -7,25 +7,43 @@ import { X } from 'lucide-react';
  * - onClose: function to close modal
  * - onSubmit: async function receiving YouTube URL string
  * - initialUrl: optional string for edit mode
+ * - initialCategory: optional string for edit mode
  * - isEdit: boolean flag for edit mode
  */
-const AddEditVideoModal = ({ isOpen, onClose, onSubmit, initialUrl = '', isEdit = false }) => {
+const CATEGORIES = [
+  'GST',
+  'Income Tax',
+  'ROC Compliance',
+  'Company Registration',
+  'Trademark',
+  'Payroll & HR',
+  'Accounting',
+  'Audit & Assurance'
+];
+
+const AddEditVideoModal = ({ isOpen, onClose, onSubmit, initialUrl = '', initialCategory = '', isEdit = false }) => {
   const [url, setUrl] = useState('');
+  const [category, setCategory] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
     setUrl(initialUrl);
+    setCategory(initialCategory);
     setError('');
-  }, [initialUrl, isOpen]);
+  }, [initialUrl, initialCategory, isOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!url.trim()) {
-      setError('Please paste a YouTube video URL');
+      setError('Please paste a YouTube video URL.');
+      return;
+    }
+    if (!category) {
+      setError('Please select a category.');
       return;
     }
     try {
-      await onSubmit(url.trim());
+      await onSubmit(url.trim(), category);
     } catch (err) {
       setError('Operation failed. Please try again.');
     }
@@ -48,8 +66,18 @@ const AddEditVideoModal = ({ isOpen, onClose, onSubmit, initialUrl = '', isEdit 
             placeholder="Paste YouTube video link..."
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            className="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            className="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-slate-900"
           />
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full border border-slate-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 bg-white text-slate-900"
+          >
+            <option value="">Select Category</option>
+            {CATEGORIES.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex justify-end space-x-3 mt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 bg-slate-200 text-slate-800 rounded hover:bg-slate-300 transition">

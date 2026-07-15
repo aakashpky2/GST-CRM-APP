@@ -203,7 +203,7 @@ function App() {
             <Route path="modules" element={<LearningServiceRoute><Modules /></LearningServiceRoute>} />
             <Route path="modules/:id" element={<LearningServiceRoute><ModuleDetail /></LearningServiceRoute>} />
             <Route path="learning/:service" element={<LearningServiceRoute><LearningPage /></LearningServiceRoute>} />
-            <Route path="learning/gst/video/:videoId" element={<LearningServiceRoute><GSTVideoPlayer /></LearningServiceRoute>} />
+            <Route path="learning/:service/video/:videoId" element={<LearningServiceRoute><GSTVideoPlayer /></LearningServiceRoute>} />
             <Route path="compliance" element={<LearningServiceRoute><div className="p-8"><h1 className="text-2xl font-bold">Compliance Updates</h1><p className="text-slate-500 mt-2">Feature coming soon...</p></div></LearningServiceRoute>} />
             <Route path="resources" element={<LearningServiceRoute><div className="p-8"><h1 className="text-2xl font-bold">Resources</h1><p className="text-slate-500 mt-2">Feature coming soon...</p></div></LearningServiceRoute>} />
             <Route path="settings" element={<Settings />} />

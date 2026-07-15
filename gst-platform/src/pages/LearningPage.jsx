@@ -28,6 +28,16 @@ import { useAuth } from '../context/AuthContext';
 import { useCanManageVideos } from '../hooks/useCanManageVideos';
 
 // Placeholder: videos will be fetched from backend
+const CATEGORY_MAP = {
+  'gst': 'GST',
+  'income-tax': 'Income Tax',
+  'roc-compliance': 'ROC Compliance',
+  'company-registration': 'Company Registration',
+  'trademark': 'Trademark',
+  'payroll-hr': 'Payroll & HR',
+  'accounting': 'Accounting',
+  'audit': 'Audit & Assurance'
+};
 
 // Comprehensive mock data for the 8 services
 const SERVICES_DATA = {
@@ -339,7 +349,8 @@ const LearningPage = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetchVideos();
+        const currentCategory = CATEGORY_MAP[serviceKey] || 'GST';
+        const res = await fetchVideos(currentCategory);
         setVideos(res.data.videos || []);
         
         if (user?.role === 'student') {
@@ -556,12 +567,20 @@ const LearningPage = () => {
                 {user?.role === 'student' && credits === 0 ? (
                   <div className="bg-rose-50 border border-rose-100 p-8 rounded-2xl text-center">
                     <h4 className="text-lg font-bold text-rose-600 mb-2">Access Restricted</h4>
-                    <p className="text-rose-500">No learning credits available. Please contact your Manager or Institute to request more credits.</p>
+                    <p className="text-rose-500">
+                      You have exhausted your learning credits.<br />
+                      Please contact your administrator to request additional credits.
+                    </p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {loadingVideos ? (
                       <p>Loading videos...</p>
+                    ) : videos.length === 0 ? (
+                      <div className="col-span-full bg-white p-8 rounded-2xl border border-slate-100 text-center text-slate-500">
+                        No learning videos are available for this category yet.<br />
+                        Please check back later.
+                      </div>
                     ) : (
                       videos.map((vid) => (
                         <div key={vid.id} className="relative group">
@@ -692,16 +711,24 @@ const LearningPage = () => {
             onClose={() => setShowModal(false)}
             isEdit={!!editVideo}
             initialUrl={editVideo ? (editVideo.youtube_url || editVideo.url) : ''}
-            onSubmit={async (url) => {
+            initialCategory={editVideo ? editVideo.category : (CATEGORY_MAP[serviceKey] || 'GST')}
+            onSubmit={async (url, cat) => {
               try {
+                const currentCategory = CATEGORY_MAP[serviceKey] || 'GST';
                 if (editVideo) {
-                  const res = await updateVideo(editVideo.id, url);
-                  setVideos(prev => prev.map(v => v.id === editVideo.id ? res.data.video : v));
+                  const res = await updateVideo(editVideo.id, url, cat);
+                  if (cat !== currentCategory) {
+                    setVideos(prev => prev.filter(v => v.id !== editVideo.id));
+                  } else {
+                    setVideos(prev => prev.map(v => v.id === editVideo.id ? res.data.video : v));
+                  }
                   toast.success('Video updated');
                 } else {
-                  const res = await addVideo(url);
+                  const res = await addVideo(url, cat);
                   const newVideo = res.data.video;
-                  setVideos(prev => [newVideo, ...prev]);
+                  if (cat === currentCategory) {
+                    setVideos(prev => [newVideo, ...prev]);
+                  }
                   toast.success('Video added');
                 }
                 setShowModal(false);

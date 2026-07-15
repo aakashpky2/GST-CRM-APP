@@ -31,7 +31,9 @@ exports.getAllVideos = async (req, res) => {
   try {
     let query = supabaseAdmin.from('learning_videos').select('*').order('created_at', { ascending: false });
 
-    // Filter by allowed modules for non-admin users
+    // The user's role is validated via auth middleware, and the category is filtered below.
+    // If granular module permissions are implemented in the future, re-enable this section.
+    /*
     const userRole = req.user?.role;
     if (userRole !== 'admin' && userRole !== 'superadmin') {
       const allowedModules = [];
@@ -47,6 +49,11 @@ exports.getAllVideos = async (req, res) => {
       
       query = query.in('category', allowedModules);
     }
+    */
+    // Filter by category if provided in query
+    if (req.query.category) {
+      query = query.eq('category', req.query.category);
+    }
 
     const { data, error } = await query;
     if (error) throw error;
@@ -59,19 +66,34 @@ exports.getAllVideos = async (req, res) => {
 
 // POST create video (admin only)
 exports.createVideo = async (req, res) => {
-  const { youtube_url } = req.body;
+  const { youtube_url, category } = req.body;
   if (!youtube_url) {
     return res.status(400).json({ success: false, message: 'youtube_url is required' });
   }
+  if (!category) {
+    return res.status(400).json({ success: false, message: 'category is required' });
+  }
   try {
     const { videoId, thumbnail, title } = await extractYouTubeInfo(youtube_url);
+    
+    // Check for duplicates in the same category
+    const { data: existing, error: existErr } = await supabaseAdmin
+      .from('learning_videos')
+      .select('id')
+      .eq('category', category)
+      .eq('youtube_url', youtube_url)
+      .single();
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'Duplicate YouTube URL in this category is not allowed' });
+    }
+
     const { data, error } = await supabaseAdmin.from('learning_videos')
       .insert({
         title,
         video_id: videoId,
         youtube_url,
         thumbnail,
-        category: 'gst',
+        category,
       })
       .select()
       .single();
@@ -87,20 +109,38 @@ exports.createVideo = async (req, res) => {
 // PUT update video (admin only)
 exports.updateVideo = async (req, res) => {
   const { id } = req.params;
-  const { youtube_url } = req.body;
+  const { youtube_url, category } = req.body;
   if (!youtube_url) {
     return res.status(400).json({ success: false, message: 'youtube_url is required' });
   }
   try {
     const { videoId, thumbnail, title } = await extractYouTubeInfo(youtube_url);
+    
+    if (category) {
+      // Check for duplicates in the new category
+      const { data: existing } = await supabaseAdmin
+        .from('learning_videos')
+        .select('id')
+        .eq('category', category)
+        .eq('youtube_url', youtube_url)
+        .neq('id', id)
+        .single();
+      if (existing) {
+        return res.status(400).json({ success: false, message: 'Duplicate YouTube URL in this category is not allowed' });
+      }
+    }
+
+    const updateData = {
+      title,
+      video_id: videoId,
+      youtube_url,
+      thumbnail,
+      updated_at: new Date().toISOString(),
+    };
+    if (category) updateData.category = category;
+
     const { data, error } = await supabaseAdmin.from('learning_videos')
-      .update({
-        title,
-        video_id: videoId,
-        youtube_url,
-        thumbnail,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();

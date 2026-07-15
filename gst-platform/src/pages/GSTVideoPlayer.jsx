@@ -7,8 +7,22 @@ import { toast } from 'react-hot-toast';
 import YouTube from 'react-youtube';
 
 const GSTVideoPlayer = () => {
-  const { videoId } = useParams();
+  const { service, videoId } = useParams();
   const navigate = useNavigate();
+  
+  const formatServiceName = (srv) => {
+    const map = {
+      'gst': 'GST',
+      'income-tax': 'Income Tax',
+      'roc-compliance': 'ROC Compliance',
+      'company-registration': 'Company Registration',
+      'trademark': 'Trademark',
+      'payroll-hr': 'Payroll & HR',
+      'accounting': 'Accounting',
+      'audit': 'Audit & Assurance'
+    };
+    return map[srv] || 'GST';
+  };
   
   const [sessionId, setSessionId] = useState(null);
   const [blocked, setBlocked] = useState(false);
@@ -50,7 +64,7 @@ const GSTVideoPlayer = () => {
         console.error('Failed to start session', e);
         if (e.response?.status === 403) {
           setBlocked(true);
-          setBlockedMessage(e.response.data.message || 'Learning service unavailable. Please contact your manager.');
+          setBlockedMessage(e.response.data.message || 'You have exhausted your learning credits. Please contact your administrator to request additional credits.');
           toast.error(e.response.data.message || 'Insufficient credits to start video.');
         } else {
           toast.error('Failed to load video session.');
@@ -207,7 +221,7 @@ const GSTVideoPlayer = () => {
               <div className="flex items-center gap-2 text-sm text-slate-500">
                 <span>Learning Center</span>
                 <span>•</span>
-                <span>GST</span>
+                <span>{formatServiceName(service)}</span>
               </div>
             </div>
           </div>

@@ -84,14 +84,15 @@ const ManageVideos = () => {
           onClose={() => setShowModal(false)}
           isEdit={!!editVideo}
           initialUrl={editVideo ? (editVideo.youtube_url || editVideo.url) : ''}
-          onSubmit={async (url) => {
+          initialCategory={editVideo ? editVideo.category : ''}
+          onSubmit={async (url, cat) => {
             try {
               if (editVideo) {
-                const res = await updateVideo(editVideo.id, url);
+                const res = await updateVideo(editVideo.id, url, cat);
                 setVideos(prev => prev.map(v => v.id === editVideo.id ? res.data.video : v));
                 toast.success('Video updated');
               } else {
-                const res = await addVideo(url);
+                const res = await addVideo(url, cat);
                 const newVideo = res.data.video;
                 setVideos(prev => [newVideo, ...prev]);
                 toast.success('Video added');

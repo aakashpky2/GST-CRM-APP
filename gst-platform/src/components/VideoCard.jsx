@@ -9,6 +9,20 @@ const getYouTubeId = (url) => {
   return (match && match[2].length === 11) ? match[2] : null;
 };
 
+const getServiceKey = (category) => {
+  const map = {
+    'GST': 'gst',
+    'Income Tax': 'income-tax',
+    'ROC Compliance': 'roc-compliance',
+    'Company Registration': 'company-registration',
+    'Trademark': 'trademark',
+    'Payroll & HR': 'payroll-hr',
+    'Accounting': 'accounting',
+    'Audit & Assurance': 'audit'
+  };
+  return map[category] || 'gst';
+};
+
 const VideoCard = ({ video }) => {
   const navigate = useNavigate();
   const videoId = video.video_id || getYouTubeId(video.youtube_url || video.url);
@@ -16,7 +30,7 @@ const VideoCard = ({ video }) => {
 
   const handleClick = () => {
     if (videoId) {
-      navigate(`/learning/gst/video/${videoId}`);
+      navigate(`/learning/${getServiceKey(video.category)}/video/${videoId}`);
     }
   };
 
