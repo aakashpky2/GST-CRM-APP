@@ -10,6 +10,9 @@ import DashboardLayout from './layouts/DashboardLayout';
 // Pages
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import ChannelDashboard from './pages/ChannelDashboard';
+import InstituteDashboard from './pages/InstituteDashboard';
+import ManagerDashboard from './pages/ManagerDashboard';
 import Modules from './pages/Modules';
 import ModuleDetail from './pages/ModuleDetail';
 import SystemRole from './pages/SystemRole';
@@ -22,7 +25,7 @@ import LearningPage from './pages/LearningPage';
 import GSTVideoPlayer from './pages/GSTVideoPlayer';
 import WatchSessionsMonitoring from './pages/WatchSessionsMonitoring';
 
-// Protected Route Component
+// Protected Route Component (General)
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
   
@@ -34,15 +37,20 @@ const ProtectedRoute = ({ children }) => {
     );
   }
   
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  
+  if (!user) return <Navigate to="/login" replace />;
   return children;
 };
 
-// Super Admin Protected Route Component
-const SuperAdminRoute = ({ children }) => {
+// Access Denied Component
+const AccessDenied = () => (
+  <div className="flex flex-col items-center justify-center p-12 bg-white rounded-[2rem] border border-slate-100 shadow-sm mt-10 max-w-xl mx-auto text-center">
+    <h1 className="text-2xl font-bold text-slate-800 mb-2">Access Denied</h1>
+    <p className="text-slate-500 text-sm">You do not have permission to access this page.</p>
+  </div>
+);
+
+// Generic Role Route Factory
+const RoleRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
   
   if (loading) {
@@ -53,26 +61,14 @@ const SuperAdminRoute = ({ children }) => {
     );
   }
   
-  // If no user is logged in, redirect to the existing login page
-  if (!user) {
-    console.log('SuperAdminRoute: No user logged in. Redirecting to /login');
-    return <Navigate to="/login" replace />;
-  }
-  
-  // If logged-in user is not superadmin, redirect them to their correct dashboard
-  if (user.role !== 'superadmin') {
-    console.log(`SuperAdminRoute: User role '${user.role}' is not superadmin. Redirecting to appropriate dashboard.`);
-    if (user.role === 'admin') {
-      return <Navigate to="/admin/dashboard" replace />;
-    }
-    return <Navigate to="/student/dashboard" replace />;
-  }
+  if (!user) return <Navigate to="/login" replace />;
+  if (!allowedRoles.includes(user.role)) return <AccessDenied />;
   
   return children;
 };
 
-// Admin Panel Protected Route Component
-const AdminPanelRoute = ({ children }) => {
+// Permission Route Factory
+const PermissionRoute = ({ children, permissionKey }) => {
   const { user, loading } = useAuth();
   
   if (loading) {
@@ -83,87 +79,14 @@ const AdminPanelRoute = ({ children }) => {
     );
   }
   
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
+  if (!user) return <Navigate to="/login" replace />;
   
-  const hasAdminPanel = 
+  const hasPermission = 
     user.role === 'superadmin' || 
     user.role === 'admin' || 
-    user.permissions?.admin_panel === true ||
-    user.permissions === undefined;
+    user.permissions?.[permissionKey] === true;
 
-  if (!hasAdminPanel) {
-    return (
-      <div className="flex flex-col items-center justify-center p-12 bg-white rounded-[2rem] border border-slate-100 shadow-sm mt-10 max-w-xl mx-auto text-center">
-        <h1 className="text-2xl font-bold text-slate-800 mb-2">Access Denied</h1>
-        <p className="text-slate-500 text-sm">You do not have permission to access the Admin Panel. Contact your administrator for access.</p>
-      </div>
-    );
-  }
-  
-  return children;
-};
-
-// Learning Service Protected Route Component
-const LearningServiceRoute = ({ children }) => {
-  const { user, loading } = useAuth();
-  
-  if (loading) {
-    return (
-      <div className="h-screen w-screen flex items-center justify-center bg-[#F8FAFC]">
-        <div className="w-10 h-10 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
-  
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  const hasLearningService = 
-    user.role === 'superadmin' || 
-    user.role === 'admin' || 
-    user.permissions?.learning_service === true;
-
-  if (!hasLearningService) {
-    return (
-      <div className="flex flex-col items-center justify-center p-12 bg-white rounded-[2rem] border border-slate-100 shadow-sm mt-10 max-w-xl mx-auto text-center">
-        <h1 className="text-2xl font-bold text-slate-800 mb-2">Access Denied</h1>
-        <p className="text-slate-500 text-sm">You do not have permission to access the Learning Service. Contact your administrator for access.</p>
-      </div>
-    );
-  }
-  
-  return children;
-};
-
-// Hierarchy Management Protected Route Component
-const HierarchyRoute = ({ children }) => {
-  const { user, loading } = useAuth();
-  
-  if (loading) {
-    return (
-      <div className="h-screen w-screen flex items-center justify-center bg-[#F8FAFC]">
-        <div className="w-10 h-10 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
-  
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  const hasHierarchy = user.permissions?.hierarchy_management === true;
-
-  if (!hasHierarchy) {
-    return (
-      <div className="flex flex-col items-center justify-center p-12 bg-white rounded-[2rem] border border-slate-100 shadow-sm mt-10 max-w-xl mx-auto text-center">
-        <h1 className="text-2xl font-bold text-slate-800 mb-2">Access Denied</h1>
-        <p className="text-slate-500 text-sm">You do not have permission to manage teams.</p>
-      </div>
-    );
-  }
+  if (!hasPermission) return <AccessDenied />;
   
   return children;
 };
@@ -180,42 +103,50 @@ function App() {
           
           {/* Super Admin Routes */}
           <Route path="/superadmin/dashboard" element={
-            <SuperAdminRoute>
+            <RoleRoute allowedRoles={['superadmin']}>
               <SuperAdminDashboard />
-            </SuperAdminRoute>
+            </RoleRoute>
           } />
 
           {/* Admin Routes */}
           <Route path="/admin/dashboard" element={
-            <AdminPanelRoute>
+            <RoleRoute allowedRoles={['superadmin', 'admin']}>
               <AdminDashboard />
-            </AdminPanelRoute>
+            </RoleRoute>
           } />
 
-          {/* Protected Routes */}
+          {/* Protected Routes Wrapper */}
           <Route path="/" element={
             <ProtectedRoute>
               <DashboardLayout />
             </ProtectedRoute>
           }>
-            <Route index element={<Dashboard />} />
-            <Route path="student/dashboard" element={<Dashboard />} />
-            <Route path="modules" element={<LearningServiceRoute><Modules /></LearningServiceRoute>} />
-            <Route path="modules/:id" element={<LearningServiceRoute><ModuleDetail /></LearningServiceRoute>} />
-            <Route path="learning/:service" element={<LearningServiceRoute><LearningPage /></LearningServiceRoute>} />
-            <Route path="learning/:service/video/:videoId" element={<LearningServiceRoute><GSTVideoPlayer /></LearningServiceRoute>} />
-            <Route path="compliance" element={<LearningServiceRoute><div className="p-8"><h1 className="text-2xl font-bold">Compliance Updates</h1><p className="text-slate-500 mt-2">Feature coming soon...</p></div></LearningServiceRoute>} />
-            <Route path="resources" element={<LearningServiceRoute><div className="p-8"><h1 className="text-2xl font-bold">Resources</h1><p className="text-slate-500 mt-2">Feature coming soon...</p></div></LearningServiceRoute>} />
+            {/* Specific Role Dashboards */}
+            <Route path="channel/dashboard" element={<RoleRoute allowedRoles={['channel']}><ChannelDashboard /></RoleRoute>} />
+            <Route path="institute/dashboard" element={<RoleRoute allowedRoles={['institute']}><InstituteDashboard /></RoleRoute>} />
+            <Route path="manager/dashboard" element={<RoleRoute allowedRoles={['manager']}><ManagerDashboard /></RoleRoute>} />
+            <Route path="student/dashboard" element={<RoleRoute allowedRoles={['student']}><Dashboard /></RoleRoute>} />
+            
+            {/* If someone accesses / directly, we could redirect them but the dashboard layout handles the nested route. We will make index route dynamically handled or redirect */}
+            <Route index element={<Navigate to="/login" replace />} />
+
+            {/* Permission Based Routes */}
+            <Route path="modules" element={<PermissionRoute permissionKey="learning_service"><Modules /></PermissionRoute>} />
+            <Route path="modules/:id" element={<PermissionRoute permissionKey="learning_service"><ModuleDetail /></PermissionRoute>} />
+            <Route path="learning/:service" element={<PermissionRoute permissionKey="learning_service"><LearningPage /></PermissionRoute>} />
+            <Route path="learning/:service/video/:videoId" element={<PermissionRoute permissionKey="learning_service"><GSTVideoPlayer /></PermissionRoute>} />
+            
             <Route path="settings" element={<Settings />} />
             <Route path="projects" element={<Projects />} />
-            <Route path="system-role" element={<AdminPanelRoute><SystemRole /></AdminPanelRoute>} />
-            <Route path="user-management" element={<AdminPanelRoute><UserManagement /></AdminPanelRoute>} />
-            <Route path="watch-monitoring" element={<AdminPanelRoute><WatchSessionsMonitoring /></AdminPanelRoute>} />
-            <Route path="team-management" element={<HierarchyRoute><UserManagement /></HierarchyRoute>} />
+            
+            <Route path="system-role" element={<PermissionRoute permissionKey="admin_panel"><SystemRole /></PermissionRoute>} />
+            <Route path="user-management" element={<PermissionRoute permissionKey="admin_panel"><UserManagement /></PermissionRoute>} />
+            <Route path="watch-monitoring" element={<PermissionRoute permissionKey="admin_panel"><WatchSessionsMonitoring /></PermissionRoute>} />
+            <Route path="team-management" element={<PermissionRoute permissionKey="hierarchy_management"><UserManagement /></PermissionRoute>} />
           </Route>
 
           {/* Catch all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>
     </AuthProvider>

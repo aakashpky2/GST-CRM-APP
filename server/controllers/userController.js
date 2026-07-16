@@ -58,6 +58,8 @@ exports.createUser = async (req, res) => {
       .insert({
         id: authUser.user.id,
         username,
+        email,
+        password_hash: 'supabase_auth', // Satisfy legacy NOT NULL constraint
         role,
         permissions,
         status: status || 'active',
@@ -102,6 +104,7 @@ exports.deleteUser = async (req, res) => {
       .single();
 
     if (fetchError || !targetUser) {
+      console.error('fetchError inside deleteUser:', fetchError);
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
@@ -112,13 +115,152 @@ exports.deleteUser = async (req, res) => {
       }
     }
 
-    // Delete from Supabase Auth (this cascades to public.users because of DB triggers, if set, otherwise delete manually)
+    // Delete from Supabase Auth
     const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(id);
-    if (authDeleteError) throw authDeleteError;
+    if (authDeleteError && authDeleteError.code !== 'user_not_found') {
+      throw authDeleteError;
+    }
+
+    // Explicitly delete from public.users in case cascading delete didn't work or auth user was already deleted
+    const { error: dbDeleteError } = await supabaseAdmin.from('users').delete().eq('id', id);
+    if (dbDeleteError) {
+      console.error("Error deleting from public.users:", dbDeleteError);
+    }
 
     res.json({ success: true, message: 'User deleted successfully' });
   } catch (err) {
     console.error('Delete user error:', err);
     res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.getProfile = async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('users')
+      .select('id, username, full_name, mobile_number, institute, student_id, joining_date, role, status')
+      .eq('id', req.user.id)
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, profile: data });
+  } catch (err) {
+    console.error('Get profile error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch profile' });
+  }
+};
+
+exports.updateProfile = async (req, res) => {
+  try {
+    const { full_name, mobile_number, institute, student_id } = req.body;
+    const { data, error } = await supabaseAdmin
+      .from('users')
+      .update({ full_name, mobile_number, institute, student_id })
+      .eq('id', req.user.id)
+      .select('id, username, full_name, mobile_number, institute, student_id, joining_date, role, status')
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, profile: data });
+  } catch (err) {
+    console.error('Update profile error:', err);
+    res.status(500).json({ success: false, message: 'Failed to update profile' });
+  }
+};
+
+exports.getSettings = async (req, res) => {
+  try {
+    let { data, error } = await supabaseAdmin
+      .from('student_settings')
+      .select('*')
+      .eq('student_id', req.user.id)
+      .maybeSingle();
+
+    if (error) throw error;
+    
+    if (!data) {
+      // Create default settings if not exists
+      const { data: newData, error: insertError } = await supabaseAdmin
+        .from('student_settings')
+        .insert({ student_id: req.user.id })
+        .select()
+        .single();
+      
+      if (insertError) throw insertError;
+      data = newData;
+    }
+
+    res.json({ success: true, settings: data });
+  } catch (err) {
+    console.error('Get settings error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch settings' });
+  }
+};
+
+exports.updateSettings = async (req, res) => {
+  try {
+    const updates = req.body;
+    // ensure student_id is not changed
+    delete updates.id;
+    delete updates.student_id;
+    updates.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabaseAdmin
+      .from('student_settings')
+      .update(updates)
+      .eq('student_id', req.user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, settings: data });
+  } catch (err) {
+    console.error('Update settings error:', err);
+    res.status(500).json({ success: false, message: 'Failed to update settings' });
+  }
+};
+
+exports.getLearningStatistics = async (req, res) => {
+  try {
+    // Fetch credits
+    const { data: credits, error: creditsError } = await supabaseAdmin
+      .from('student_credits')
+      .select('used_credits, remaining_credits')
+      .eq('student_id', req.user.id)
+      .maybeSingle();
+
+    // Fetch video watch sessions to calculate watch time and completed videos
+    const { data: sessions, error: sessionsError } = await supabaseAdmin
+      .from('video_watch_sessions')
+      .select('duration_watched, completed')
+      .eq('student_id', req.user.id);
+      
+    if (creditsError) console.error('Credits error:', creditsError);
+    if (sessionsError) console.error('Sessions error:', sessionsError);
+
+    let totalWatchTime = 0;
+    let videosCompleted = 0;
+    
+    if (sessions) {
+      sessions.forEach(s => {
+        totalWatchTime += (s.duration_watched || 0);
+        if (s.completed) videosCompleted++;
+      });
+    }
+
+    const stats = {
+      creditsRemaining: credits?.remaining_credits || 0,
+      creditsUsed: credits?.used_credits || 0,
+      totalWatchTime, // in seconds usually
+      videosCompleted,
+      coursesEnrolled: 0, // Placeholder
+      currentProgress: 0, // Placeholder
+      lastLogin: new Date().toISOString() // Or fetch from auth logic if stored
+    };
+
+    res.json({ success: true, stats });
+  } catch (err) {
+    console.error('Get learning stats error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch learning statistics' });
   }
 };

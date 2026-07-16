@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { supabase } from '../supabase';
 
 const AuthContext = createContext(null);
 
@@ -15,31 +16,40 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('user');
-      
-      console.log('--- AUTH CHECK ON MOUNT ---');
-      console.log('Stored Token Found:', !!token);
-      console.log('Stored User Found:', !!storedUser);
-
-      // If either is missing but the other exists, clear both to avoid inconsistent state
-      if (!token || !storedUser) {
-        if (token || storedUser) {
-          console.log('Inconsistent auth state found. Clearing storage.');
-          localStorage.clear();
+      try {
+        console.log('--- AUTH CHECK ON MOUNT ---');
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error("Supabase getSession error:", sessionError);
+          throw sessionError;
         }
-        setUser(null);
-      } else {
-        try {
-          setUser(JSON.parse(storedUser));
+
+        if (session) {
+          const token = session.access_token;
+          localStorage.setItem('token', token);
           axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        } catch (e) {
-          console.error('Failed to parse stored user:', e);
+          
+          // Fetch user details to get role and permissions
+          const response = await axios.get(`${API_URL}/auth/me`);
+          if (response.data.success) {
+            setUser(response.data.data);
+            localStorage.setItem('user', JSON.stringify(response.data.data));
+          } else {
+            throw new Error('Failed to fetch user profile');
+          }
+        } else {
           localStorage.clear();
           setUser(null);
         }
+      } catch (e) {
+        console.error('Session restoration failed:', e);
+        localStorage.clear();
+        setUser(null);
+        delete axios.defaults.headers.common['Authorization'];
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     checkAuth();
   }, []);
@@ -48,19 +58,11 @@ export const AuthProvider = ({ children }) => {
     console.log('>>>> AUTH_CONTEXT: login() called');
     console.log('>>>> DATA RECEIVED: email:', email, 'passwordExists:', !!password);
 
-    console.log('VITE_API_URL ENV VALUE:', import.meta.env.VITE_API_URL);
-    console.log('FINAL RESOLVED API URL:', `${API_URL}/auth/login`);
-    console.log('REQUEST PAYLOAD SENT TO BACKEND:', { email, password: '***' });
-
     try {
       const response = await axios.post(`${API_URL}/auth/login`, { email, password });
       
-      console.log('<<<< BACKEND RESPONSE RECEIVED:', response.data);
-
       if (response.data.success) {
         const { token, user: userData } = response.data;
-        
-        console.log('<<<< TOKEN RECEIVED:', !!token);
         
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(userData));
@@ -80,8 +82,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     console.log('>>>> LOGOUT CALLED');
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Supabase signOut error:", err);
+    }
     localStorage.clear();
     setUser(null);
     delete axios.defaults.headers.common['Authorization'];

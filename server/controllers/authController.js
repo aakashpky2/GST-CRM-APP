@@ -69,7 +69,7 @@ exports.login = async (req, res, next) => {
       console.log('LOGIN BLOCKED: User account status is inactive:', dbUser.status);
       return res.status(401).json({
         success: false,
-        message: 'Your account is inactive. Please contact admin.'
+        message: 'Your account has been disabled. Please contact the administrator.'
       });
     }
 
@@ -120,6 +120,43 @@ exports.getMe = async (req, res, next) => {
       data: req.user
     });
   } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Change password
+// @route   POST /api/auth/change-password
+exports.changePassword = async (req, res, next) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ success: false, message: 'Current and new password are required' });
+  }
+
+  try {
+    // Verify current password
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: req.user.email,
+      password: currentPassword
+    });
+
+    if (signInError) {
+      return res.status(401).json({ success: false, message: 'Current password is incorrect.' });
+    }
+
+    // Update password using Supabase Admin
+    const { error: updateError } = await supabase.supabaseAdmin.auth.admin.updateUserById(
+      req.user.id,
+      { password: newPassword }
+    );
+
+    if (updateError) {
+      console.error('Update password error:', updateError);
+      return res.status(500).json({ success: false, message: 'Failed to update password.' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Password updated successfully.' });
+  } catch (error) {
+    console.error('Change password unexpected error:', error);
     next(error);
   }
 };
