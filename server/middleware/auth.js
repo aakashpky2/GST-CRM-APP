@@ -52,7 +52,7 @@ exports.protect = async (req, res, next) => {
       console.log('USER ACCOUNT INACTIVE FOR AUTH ID:', user.id);
       return res.status(401).json({
         success: false,
-        message: 'Your account has been disabled. Please contact the administrator.',
+        message: 'Your account is inactive. Please contact admin.',
       });
     }
 
