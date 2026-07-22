@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../supabase';
 
 export const SettingsModals = ({ activeModal, setActiveModal, user }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
+  const [isUpdating, setIsUpdating] = useState(false);
   
   const [profileForm, setProfileForm] = useState({
     name: user?.user_metadata?.full_name || '',
@@ -36,7 +38,59 @@ export const SettingsModals = ({ activeModal, setActiveModal, user }) => {
   };
 
   const passStrength = checkPasswordStrength(passwordForm.new);
-  const isPassValid = Object.values(passStrength).every(Boolean) && passwordForm.new === passwordForm.confirm;
+  const isPassValid = Object.values(passStrength).every(Boolean) && passwordForm.new === passwordForm.confirm && passwordForm.current;
+
+  const handlePasswordUpdate = async () => {
+    if (!isPassValid) return;
+    setIsUpdating(true);
+
+    try {
+      // 1. Get the real email from Supabase using the stored token
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Session token not found.');
+        setIsUpdating(false);
+        return;
+      }
+
+      const { data: { user: supabaseUser }, error: getUserError } = await supabase.auth.getUser(token);
+      
+      if (getUserError || !supabaseUser?.email) {
+        toast.error('Could not verify user identity.');
+        setIsUpdating(false);
+        return;
+      }
+
+      // 2. Verify current password by attempting to sign in with the real email
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: supabaseUser.email,
+        password: passwordForm.current,
+      });
+
+      if (signInError) {
+        toast.error('Current password is incorrect.');
+        setIsUpdating(false);
+        return;
+      }
+
+      // 3. Update password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: passwordForm.new,
+      });
+
+      if (updateError) {
+        toast.error(updateError.message || 'Failed to update password.');
+      } else {
+        toast.success('Password updated successfully!');
+        setPasswordForm({ current: '', new: '', confirm: '' });
+        handleClose();
+      }
+    } catch (err) {
+      toast.error('An unexpected error occurred.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const renderContent = () => {
     switch (activeModal) {
@@ -45,7 +99,7 @@ export const SettingsModals = ({ activeModal, setActiveModal, user }) => {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
-              <input type="text" value={profileForm.name} onChange={(e) => setProfileForm({...profileForm, name: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+              <input type="text" value={profileForm.name} onChange={(e) => setProfileForm({...profileForm, name: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-slate-900" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Email (Read Only)</label>
@@ -53,11 +107,11 @@ export const SettingsModals = ({ activeModal, setActiveModal, user }) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Mobile Number</label>
-              <input type="tel" value={profileForm.mobile} onChange={(e) => setProfileForm({...profileForm, mobile: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+              <input type="tel" value={profileForm.mobile} onChange={(e) => setProfileForm({...profileForm, mobile: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-slate-900" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Institute</label>
-              <input type="text" value={profileForm.institute} onChange={(e) => setProfileForm({...profileForm, institute: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+              <input type="text" value={profileForm.institute} onChange={(e) => setProfileForm({...profileForm, institute: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-slate-900" />
             </div>
             <div className="flex justify-end gap-3 mt-6">
               <button onClick={handleClose} className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Cancel</button>
@@ -71,12 +125,12 @@ export const SettingsModals = ({ activeModal, setActiveModal, user }) => {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
-              <input type="password" value={passwordForm.current} onChange={(e) => setPasswordForm({...passwordForm, current: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+              <input type="password" value={passwordForm.current} onChange={(e) => setPasswordForm({...passwordForm, current: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-slate-900" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
               <div className="relative">
-                <input type={showPassword ? 'text' : 'password'} value={passwordForm.new} onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 pr-10" />
+                <input type={showPassword ? 'text' : 'password'} value={passwordForm.new} onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 pr-10 text-slate-900" />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -91,12 +145,14 @@ export const SettingsModals = ({ activeModal, setActiveModal, user }) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Confirm Password</label>
-              <input type="password" value={passwordForm.confirm} onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+              <input type="password" value={passwordForm.confirm} onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-slate-900" />
               {passwordForm.confirm && passwordForm.new !== passwordForm.confirm && <p className="text-red-500 text-xs mt-1">Passwords do not match</p>}
             </div>
             <div className="flex justify-end gap-3 mt-6">
-              <button onClick={handleClose} className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Cancel</button>
-              <button disabled={!isPassValid} onClick={() => { toast.success('Password updated successfully!'); handleClose(); }} className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed">Update Password</button>
+              <button onClick={handleClose} disabled={isUpdating} className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50">Cancel</button>
+              <button disabled={!isPassValid || isUpdating} onClick={handlePasswordUpdate} className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                {isUpdating ? 'Updating...' : 'Update Password'}
+              </button>
             </div>
           </div>
         );

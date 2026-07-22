@@ -321,7 +321,7 @@ const DashboardLayout = () => {
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Top Navbar */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 z-10">
+        <header className="relative h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 z-50">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
