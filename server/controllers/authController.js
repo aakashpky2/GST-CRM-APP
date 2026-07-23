@@ -101,6 +101,7 @@ exports.login = async (req, res, next) => {
         username: dbUser.username,
         role: dbUser.role,
         status: dbUser.status,
+        profile_image: dbUser.profile_image,
         permissions
       }
     });
@@ -118,6 +119,33 @@ exports.getMe = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       data: req.user
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update profile image
+// @route   PUT /api/auth/profile-image
+exports.updateProfileImage = async (req, res, next) => {
+  try {
+    const { profile_image } = req.body;
+    
+    const { data, error } = await supabase.supabaseAdmin
+      .from('users')
+      .update({ profile_image })
+      .eq('id', req.user.id)
+      .select('profile_image')
+      .single();
+
+    if (error) {
+      console.error('Error updating profile image:', error.message);
+      return res.status(500).json({ success: false, message: 'Failed to update profile image' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      profile_image: data.profile_image
     });
   } catch (error) {
     next(error);

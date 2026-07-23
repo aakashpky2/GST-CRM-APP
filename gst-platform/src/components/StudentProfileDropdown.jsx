@@ -79,8 +79,12 @@ const StudentProfileDropdown = () => {
           <p className="text-sm font-bold text-slate-900">{userName}</p>
           <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{userRole}</p>
         </div>
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold border-2 transition-all ${isOpen ? 'border-cyan-500 shadow-md bg-cyan-600' : 'border-slate-200 bg-slate-400 group-hover:border-slate-300 group-hover:bg-slate-500'}`}>
-          {getInitials(userName)}
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold border-2 transition-all overflow-hidden ${isOpen ? 'border-cyan-500 shadow-md bg-cyan-600' : 'border-slate-200 bg-slate-400 group-hover:border-slate-300 group-hover:bg-slate-500'}`}>
+          {user?.profile_image ? (
+            <img src={user.profile_image} alt="Profile" className="w-full h-full object-cover" />
+          ) : (
+            getInitials(userName)
+          )}
         </div>
       </button>
 
@@ -96,8 +100,12 @@ const StudentProfileDropdown = () => {
           >
             {/* Header section */}
             <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-cyan-600 flex items-center justify-center text-white font-bold text-lg shrink-0">
-                {getInitials(userName)}
+              <div className="w-12 h-12 rounded-full bg-cyan-600 flex items-center justify-center text-white font-bold text-lg shrink-0 overflow-hidden">
+                {user?.profile_image ? (
+                  <img src={user.profile_image} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  getInitials(userName)
+                )}
               </div>
               <div className="overflow-hidden">
                 <p className="text-sm font-bold text-slate-900 truncate">{userName}</p>

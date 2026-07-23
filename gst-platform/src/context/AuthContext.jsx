@@ -80,6 +80,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateUserImage = (url) => {
+    if (user) {
+      const updatedUser = { ...user, profile_image: url };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
+  };
+
   const logout = () => {
     console.log('>>>> LOGOUT CALLED');
     localStorage.clear();
@@ -88,7 +96,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, updateUserImage }}>
       {children}
     </AuthContext.Provider>
   );

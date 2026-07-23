@@ -8,7 +8,7 @@ exports.getItems = async (req, res, next) => {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    let query = supabase
+    let query = supabase.supabaseAdmin
       .from('projects')
       .select('*', { count: 'exact' })
       .eq('user_id', req.user.id);
@@ -49,7 +49,7 @@ exports.createItem = async (req, res, next) => {
   try {
     const { name, description, status } = req.body;
     
-    const { data, error } = await supabase
+    const { data, error } = await supabase.supabaseAdmin
       .from('projects')
       .insert([
         { 
@@ -78,7 +78,7 @@ exports.updateItem = async (req, res, next) => {
   try {
     const { name, description, status } = req.body;
     
-    const { data, error } = await supabase
+    const { data, error } = await supabase.supabaseAdmin
       .from('projects')
       .update({ name, description, status })
       .eq('id', req.params.id)
@@ -104,7 +104,7 @@ exports.updateItem = async (req, res, next) => {
 // @route   DELETE /api/items/:id
 exports.deleteItem = async (req, res, next) => {
   try {
-    const { error } = await supabase
+    const { error } = await supabase.supabaseAdmin
       .from('projects')
       .delete()
       .eq('id', req.params.id)

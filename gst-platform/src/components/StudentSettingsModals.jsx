@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
+import { X, Eye, EyeOff, Check, AlertCircle, Camera, Trash2, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../supabase';
+import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
 
 export const SettingsModals = ({ activeModal, setActiveModal, user }) => {
+  const { updateUserImage } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
   const [isUpdating, setIsUpdating] = useState(false);
@@ -22,6 +25,8 @@ export const SettingsModals = ({ activeModal, setActiveModal, user }) => {
 
   const [appearance, setAppearance] = useState('System Default');
   const [language, setLanguage] = useState('English');
+  const [isUploading, setIsUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState(user?.profile_image || null);
 
   if (!activeModal) return null;
 
@@ -92,11 +97,178 @@ export const SettingsModals = ({ activeModal, setActiveModal, user }) => {
     }
   };
 
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate type
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Please select a valid image (JPG, PNG, WEBP).');
+      return;
+    }
+
+    // Validate size (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image size must be less than 2 MB.');
+      return;
+    }
+
+    // Preview
+    const previewUrl = URL.createObjectURL(file);
+    setImagePreview(previewUrl);
+    setIsUploading(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `public/${fileName}`;
+
+      const token = localStorage.getItem('token');
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://amrpdbwgvpjmrhkncthr.supabase.co';
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const res = await fetch(`${supabaseUrl}/storage/v1/object/avatars/${filePath}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'apikey': supabaseAnonKey,
+          'Content-Type': file.type,
+        },
+        body: file
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Storage upload failed');
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const publicUrl = publicUrlData.publicUrl;
+
+      // Update backend
+      const API_URL = import.meta.env.VITE_API_URL || 'https://gst-crm-app.onrender.com';
+      const BACKEND_URL = API_URL.endsWith('/api') ? API_URL : `${API_URL.replace(/\/$/, '')}/api`;
+      
+      const { data } = await axios.put(`${BACKEND_URL}/auth/profile-image`, 
+        { profile_image: publicUrl },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (data.success) {
+        updateUserImage(publicUrl);
+        toast.success('Profile picture updated successfully.');
+      } else {
+        throw new Error('Failed to update DB');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Upload failed. Please try again.');
+      setImagePreview(user?.profile_image || null); // Revert
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemoveImage = async () => {
+    if (!user?.profile_image) return;
+    setIsUploading(true);
+
+    try {
+      // Extract file path from URL
+      const urlParts = user.profile_image.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      const filePath = `public/${fileName}`;
+
+      const token = localStorage.getItem('token');
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://amrpdbwgvpjmrhkncthr.supabase.co';
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const res = await fetch(`${supabaseUrl}/storage/v1/object/avatars/${filePath}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'apikey': supabaseAnonKey
+        }
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Storage remove failed');
+      }
+
+      const API_URL = import.meta.env.VITE_API_URL || 'https://gst-crm-app.onrender.com';
+      const BACKEND_URL = API_URL.endsWith('/api') ? API_URL : `${API_URL.replace(/\/$/, '')}/api`;
+      
+      const { data } = await axios.put(`${BACKEND_URL}/auth/profile-image`, 
+        { profile_image: null },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (data.success) {
+        updateUserImage(null);
+        setImagePreview(null);
+        toast.success('Profile picture removed.');
+      } else {
+        throw new Error('Failed to remove from DB');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to remove image. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const renderContent = () => {
     switch (activeModal) {
       case 'profile':
+        const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
         return (
           <div className="space-y-4">
+            {/* Profile Picture Section */}
+            <div className="flex flex-col items-center justify-center mb-6 pb-6 border-b border-slate-100">
+              <div className="relative group">
+                <div className="w-[120px] h-[120px] rounded-full overflow-hidden bg-slate-200 flex items-center justify-center text-4xl font-bold text-slate-400 border-4 border-white shadow-md relative">
+                  {isUploading && (
+                    <div className="absolute inset-0 bg-white/60 flex items-center justify-center z-10">
+                      <Loader2 className="animate-spin text-cyan-600" size={32} />
+                    </div>
+                  )}
+                  {imagePreview ? (
+                    <img src={imagePreview} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    getInitials(userName)
+                  )}
+                </div>
+                
+                <label className="absolute bottom-0 right-0 p-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-full cursor-pointer shadow-lg transition-colors border-2 border-white">
+                  <Camera size={18} />
+                  <input type="file" className="hidden" accept="image/jpeg,image/png,image/webp" onChange={handleImageChange} disabled={isUploading} />
+                </label>
+              </div>
+              
+              <div className="flex gap-3 mt-4">
+                <label className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg cursor-pointer transition-colors">
+                  Upload Photo
+                  <input type="file" className="hidden" accept="image/jpeg,image/png,image/webp" onChange={handleImageChange} disabled={isUploading} />
+                </label>
+                {imagePreview && (
+                  <button onClick={handleRemoveImage} disabled={isUploading} className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-medium rounded-lg transition-colors flex items-center gap-2">
+                    <Trash2 size={16} /> Remove
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
               <input type="text" value={profileForm.name} onChange={(e) => setProfileForm({...profileForm, name: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-slate-900" />
