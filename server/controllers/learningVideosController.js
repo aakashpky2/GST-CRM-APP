@@ -1,5 +1,6 @@
 const axios = require('axios');
 const supabaseAdmin = require('../config/supabaseAdmin');
+const { notifyAllStudents } = require('../utils/notificationService');
 
 // Helper to extract video ID and build thumbnail & title
 async function extractYouTubeInfo(url) {
@@ -98,6 +99,15 @@ exports.createVideo = async (req, res) => {
       .select()
       .single();
     if (error) throw error;
+
+    // Trigger notification
+    await notifyAllStudents(
+      'New Video Available',
+      `A new video "${title}" has been added to the ${category} module.`,
+      'learning',
+      `/learning/${category.toLowerCase()}`
+    );
+
     res.status(201).json({ success: true, video: data });
   } catch (err) {
     console.error('Create video error:', err);

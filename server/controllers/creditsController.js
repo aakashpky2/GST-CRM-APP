@@ -1,4 +1,5 @@
 const supabase = require('../config/supabase');
+const { createNotification } = require('../utils/notificationService');
 
 // Helper to resolve student profile from database
 const resolveStudentProfile = async (studentId) => {
@@ -244,6 +245,17 @@ exports.burnCredits = async (req, res, next) => {
         description: description || 'Used credit-based service'
       });
 
+    // Notify if credits exhausted
+    if (updatedRemaining <= 0) {
+      await createNotification(
+        studentId,
+        'Credits Exhausted',
+        'Your learning credits have run out. Please request more to continue learning.',
+        'learning',
+        '/student/dashboard'
+      );
+    }
+
     res.status(200).json({
       success: true,
       message: 'Credits burned successfully',
@@ -394,6 +406,15 @@ exports.approveCreditRequest = async (req, res, next) => {
         created_by: adminId
       });
 
+    // Notify student
+    await createNotification(
+      request.student_id,
+      'Credit Request Approved',
+      `${request.requested_credits} credits have been added to your account.`,
+      'learning',
+      '/student/dashboard'
+    );
+
     res.status(200).json({
       success: true,
       message: 'Credits added successfully.'
@@ -459,6 +480,15 @@ exports.rejectCreditRequest = async (req, res, next) => {
         description: `Rejected request: ${request.reason}`,
         created_by: adminId
       });
+
+    // Notify student
+    await createNotification(
+      request.student_id,
+      'Credit Request Rejected',
+      `Your request for ${request.requested_credits} credits was rejected.`,
+      'learning',
+      '/student/dashboard'
+    );
 
     res.status(200).json({
       success: true,

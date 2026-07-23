@@ -1,4 +1,5 @@
 const supabase = require('../config/supabase');
+const { createNotification } = require('../utils/notificationService');
 
 // Constants for credit burning
 // Using 1 credit = 1 minute watched (60 seconds) as default, can be configured later
@@ -212,10 +213,20 @@ exports.endVideoSession = async (req, res) => {
       })
       .eq('id', session_id)
       .eq('student_id', studentId)
-      .select()
+      .select('*, learning_videos(title)')
       .single();
 
     if (updateError) throw updateError;
+
+    if (status === 'completed') {
+      const videoTitle = session.learning_videos?.title || 'a lesson';
+      await createNotification(
+        studentId,
+        'Lesson Completed',
+        `Congratulations on completing ${videoTitle}!`,
+        'learning'
+      );
+    }
 
     res.status(200).json({ success: true, session });
   } catch (err) {

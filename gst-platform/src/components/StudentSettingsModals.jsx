@@ -7,16 +7,16 @@ import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
 export const SettingsModals = ({ activeModal, setActiveModal, user }) => {
-  const { updateUserImage } = useAuth();
+  const { updateUserImage, updateUserProfileDetails } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
   const [isUpdating, setIsUpdating] = useState(false);
   
   const [profileForm, setProfileForm] = useState({
-    name: user?.user_metadata?.full_name || '',
-    mobile: user?.user_metadata?.phone || '',
-    institute: user?.user_metadata?.institute || '',
-    studentId: user?.user_metadata?.student_id || ''
+    name: user?.full_name || '',
+    mobile: user?.mobile_number || '',
+    institute: user?.institute || '',
+    studentId: user?.student_id || ''
   });
 
   const [notifications, setNotifications] = useState({
@@ -27,6 +27,7 @@ export const SettingsModals = ({ activeModal, setActiveModal, user }) => {
   const [language, setLanguage] = useState('English');
   const [isUploading, setIsUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState(user?.profile_image || null);
+  const [selectedFile, setSelectedFile] = useState(null);
 
   if (!activeModal) return null;
 
@@ -102,7 +103,7 @@ export const SettingsModals = ({ activeModal, setActiveModal, user }) => {
     return name.substring(0, 2).toUpperCase();
   };
 
-  const handleImageChange = async (e) => {
+  const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -122,57 +123,94 @@ export const SettingsModals = ({ activeModal, setActiveModal, user }) => {
     // Preview
     const previewUrl = URL.createObjectURL(file);
     setImagePreview(previewUrl);
+    setSelectedFile(file);
+  };
+
+  const handleSaveChanges = async () => {
     setIsUploading(true);
+    let hasChanges = false;
+    const token = localStorage.getItem('token');
+    const API_URL = import.meta.env.VITE_API_URL || 'https://gst-crm-app.onrender.com';
+    const BACKEND_URL = API_URL.endsWith('/api') ? API_URL : `${API_URL.replace(/\/$/, '')}/api`;
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-      const filePath = `public/${fileName}`;
+      // 1. Save profile details
+      const currentName = user?.full_name || '';
+      const currentMobile = user?.mobile_number || '';
+      const currentInstitute = user?.institute || '';
 
-      const token = localStorage.getItem('token');
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://amrpdbwgvpjmrhkncthr.supabase.co';
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      const res = await fetch(`${supabaseUrl}/storage/v1/object/avatars/${filePath}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'apikey': supabaseAnonKey,
-          'Content-Type': file.type,
-        },
-        body: file
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Storage upload failed');
+      if (profileForm.name !== currentName || profileForm.mobile !== currentMobile || profileForm.institute !== currentInstitute) {
+        const { data: profileData } = await axios.put(`${BACKEND_URL}/auth/profile`, 
+          { 
+            full_name: profileForm.name, 
+            mobile_number: profileForm.mobile, 
+            institute: profileForm.institute 
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        if (profileData.success) {
+          updateUserProfileDetails(profileData.user);
+          hasChanges = true;
+        } else {
+          throw new Error('Failed to update profile details');
+        }
       }
 
-      const { data: publicUrlData } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
+      // 2. Upload and save profile image if selected
+      if (selectedFile) {
+        const fileExt = selectedFile.name.split('.').pop();
+        const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+        const filePath = `public/${fileName}`;
 
-      const publicUrl = publicUrlData.publicUrl;
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://amrpdbwgvpjmrhkncthr.supabase.co';
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-      // Update backend
-      const API_URL = import.meta.env.VITE_API_URL || 'https://gst-crm-app.onrender.com';
-      const BACKEND_URL = API_URL.endsWith('/api') ? API_URL : `${API_URL.replace(/\/$/, '')}/api`;
-      
-      const { data } = await axios.put(`${BACKEND_URL}/auth/profile-image`, 
-        { profile_image: publicUrl },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+        const res = await fetch(`${supabaseUrl}/storage/v1/object/avatars/${filePath}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'apikey': supabaseAnonKey,
+            'Content-Type': selectedFile.type,
+          },
+          body: selectedFile
+        });
 
-      if (data.success) {
-        updateUserImage(publicUrl);
-        toast.success('Profile picture updated successfully.');
-      } else {
-        throw new Error('Failed to update DB');
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'Storage upload failed');
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(filePath);
+
+        const publicUrl = publicUrlData.publicUrl;
+        
+        const { data: imageData } = await axios.put(`${BACKEND_URL}/auth/profile-image`, 
+          { profile_image: publicUrl },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        if (imageData.success) {
+          updateUserImage(publicUrl);
+          setSelectedFile(null);
+          hasChanges = true;
+        } else {
+          throw new Error('Failed to update DB image URL');
+        }
       }
+
+      if (hasChanges) {
+        toast.success('Profile updated successfully!');
+      }
+      handleClose();
+
     } catch (err) {
       console.error(err);
-      toast.error('Upload failed. Please try again.');
-      setImagePreview(user?.profile_image || null); // Revert
+      toast.error(err.message || 'Update failed. Please try again.');
+      setImagePreview(user?.profile_image || null); // Revert image preview if it failed
+      setSelectedFile(null);
     } finally {
       setIsUploading(false);
     }
@@ -216,6 +254,7 @@ export const SettingsModals = ({ activeModal, setActiveModal, user }) => {
       if (data.success) {
         updateUserImage(null);
         setImagePreview(null);
+        setSelectedFile(null);
         toast.success('Profile picture removed.');
       } else {
         throw new Error('Failed to remove from DB');
@@ -231,7 +270,7 @@ export const SettingsModals = ({ activeModal, setActiveModal, user }) => {
   const renderContent = () => {
     switch (activeModal) {
       case 'profile':
-        const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
+        const userName = user?.full_name || user?.email?.split('@')[0] || 'User';
         return (
           <div className="space-y-4">
             {/* Profile Picture Section */}
@@ -286,8 +325,10 @@ export const SettingsModals = ({ activeModal, setActiveModal, user }) => {
               <input type="text" value={profileForm.institute} onChange={(e) => setProfileForm({...profileForm, institute: e.target.value})} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-slate-900" />
             </div>
             <div className="flex justify-end gap-3 mt-6">
-              <button onClick={handleClose} className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Cancel</button>
-              <button onClick={() => { toast.success('Profile updated successfully!'); handleClose(); }} className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700">Save Changes</button>
+              <button onClick={handleClose} disabled={isUploading} className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50">Cancel</button>
+              <button onClick={handleSaveChanges} disabled={isUploading} className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 flex items-center justify-center gap-2">
+                {isUploading ? <Loader2 className="animate-spin" size={16} /> : null} Save Changes
+              </button>
             </div>
           </div>
         );

@@ -1,4 +1,5 @@
 const supabase = require('../config/supabase');
+const { createNotification } = require('../utils/notificationService');
 
 // @desc    Login user
 // @route   POST /api/auth/login
@@ -102,6 +103,10 @@ exports.login = async (req, res, next) => {
         role: dbUser.role,
         status: dbUser.status,
         profile_image: dbUser.profile_image,
+        full_name: dbUser.full_name,
+        mobile_number: dbUser.mobile_number,
+        institute: dbUser.institute,
+        student_id: dbUser.student_id,
         permissions
       }
     });
@@ -143,9 +148,54 @@ exports.updateProfileImage = async (req, res, next) => {
       return res.status(500).json({ success: false, message: 'Failed to update profile image' });
     }
 
+    // Trigger notification
+    await createNotification(
+      req.user.id,
+      'Profile Picture Updated',
+      'Your profile picture was successfully updated.',
+      'account',
+      '/settings'
+    );
+
     return res.status(200).json({
       success: true,
       profile_image: data.profile_image
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update profile details
+// @route   PUT /api/auth/profile
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const { full_name, mobile_number, institute } = req.body;
+    
+    const { data, error } = await supabase.supabaseAdmin
+      .from('users')
+      .update({ full_name, mobile_number, institute })
+      .eq('id', req.user.id)
+      .select('full_name, mobile_number, institute')
+      .single();
+
+    if (error) {
+      console.error('Error updating profile:', error.message);
+      return res.status(500).json({ success: false, message: 'Failed to update profile' });
+    }
+
+    // Trigger notification
+    await createNotification(
+      req.user.id,
+      'Profile Details Updated',
+      'Your personal details have been updated successfully.',
+      'account',
+      '/settings'
+    );
+
+    return res.status(200).json({
+      success: true,
+      user: data
     });
   } catch (error) {
     next(error);

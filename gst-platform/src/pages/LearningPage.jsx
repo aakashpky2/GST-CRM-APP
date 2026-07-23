@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { 
   BookOpen, 
   PlayCircle, 
@@ -315,7 +315,8 @@ const SERVICES_DATA = {
 
 const LearningPage = () => {
   const { service } = useParams();
-  const [activeTab, setActiveTab] = useState('Overview');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'Overview');
   const serviceKey = service ? service.toLowerCase() : 'gst';
   const data = SERVICES_DATA[serviceKey] || SERVICES_DATA['gst'];
 

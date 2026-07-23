@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { RolesProvider } from './context/RolesContext';
+import { NotificationProvider } from './context/NotificationContext';
 
 // Layouts
 import DashboardLayout from './layouts/DashboardLayout';
@@ -21,6 +22,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import LearningPage from './pages/LearningPage';
 import GSTVideoPlayer from './pages/GSTVideoPlayer';
 import WatchSessionsMonitoring from './pages/WatchSessionsMonitoring';
+import Notifications from './pages/Notifications';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -172,8 +174,9 @@ function App() {
   return (
     <RolesProvider>
     <AuthProvider>
-      <Router>
-        <Toaster position="top-right" />
+      <NotificationProvider>
+        <Router>
+          <Toaster position="top-right" />
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
@@ -212,12 +215,14 @@ function App() {
             <Route path="user-management" element={<AdminPanelRoute><UserManagement /></AdminPanelRoute>} />
             <Route path="watch-monitoring" element={<AdminPanelRoute><WatchSessionsMonitoring /></AdminPanelRoute>} />
             <Route path="team-management" element={<HierarchyRoute><UserManagement /></HierarchyRoute>} />
+            <Route path="notifications" element={<Notifications />} />
           </Route>
 
           {/* Catch all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </Router>
+        </Router>
+      </NotificationProvider>
     </AuthProvider>
     </RolesProvider>
   );

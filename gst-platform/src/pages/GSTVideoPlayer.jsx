@@ -210,7 +210,7 @@ const GSTVideoPlayer = () => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => navigate(`/learning/${service || 'gst'}`, { state: { activeTab: 'Videos' } })}
               className="w-10 h-10 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-600 transition-colors"
               aria-label="Go back"
             >

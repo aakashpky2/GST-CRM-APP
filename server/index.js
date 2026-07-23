@@ -22,6 +22,7 @@ const creditsRoutes = require('./routes/credits');
 const sessionRoutes = require('./routes/sessions');
 const usersRoutes = require('./routes/users');
 const videoSessionsRoutes = require('./routes/videoSessions');
+const notificationsRoutes = require('./routes/notifications');
 const errorHandler = require('./middleware/error');
 
 const app = express();
@@ -86,6 +87,7 @@ app.use('/api', creditsRoutes);
 app.use('/api/learning/videos', learningVideosRoutes);
 app.use('/api/video', videoSessionsRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

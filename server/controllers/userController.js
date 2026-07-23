@@ -1,4 +1,5 @@
 const supabaseAdmin = require('../config/supabaseAdmin');
+const { createNotification } = require('../utils/notificationService');
 
 exports.getUsers = async (req, res) => {
   try {
@@ -80,6 +81,15 @@ exports.createUser = async (req, res) => {
         remaining_credits: 0
       });
     }
+
+    // Trigger notification to the new user
+    await createNotification(
+      authUser.user.id,
+      'Welcome to DBiz CRM',
+      `Your ${role} account has been successfully created.`,
+      'system',
+      '/'
+    );
 
     res.status(201).json({ success: true, user: dbUser });
   } catch (err) {

@@ -29,6 +29,7 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import StudentProfileDropdown from '../components/StudentProfileDropdown';
 
@@ -67,6 +68,7 @@ const DashboardLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [expandedMenus, setExpandedMenus] = useState({});
   const { user, logout } = useAuth();
+  const { unreadCount } = useNotifications();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -334,15 +336,23 @@ const DashboardLayout = () => {
               <input 
                 type="text" 
                 placeholder="Search resources..." 
-                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-transparent focus:bg-white focus:border-cyan-500/50 rounded-xl text-sm transition-all outline-none"
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-transparent focus:bg-white focus:border-cyan-500/50 rounded-xl text-sm text-black transition-all outline-none"
               />
             </div>
           </div>
 
           <div className="flex items-center gap-6">
-            <button className="relative text-slate-500 hover:text-slate-900 transition-colors">
+            <button 
+              onClick={() => navigate('/notifications')}
+              className="relative text-slate-500 hover:text-slate-900 transition-colors"
+              title="Notifications"
+            >
               <Bell size={20} />
-              <span className="absolute top-0 right-0 w-2 h-2 bg-emerald-500 rounded-full border-2 border-white"></span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white shadow-sm">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </button>
             <div className="flex items-center gap-3 border-l border-slate-200">
               <StudentProfileDropdown />
